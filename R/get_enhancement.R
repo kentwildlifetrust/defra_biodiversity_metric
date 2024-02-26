@@ -53,6 +53,7 @@ get_enhancement <- function(filepath, section = c("off-site", "on-site"), module
       .default = .x
     )) %>%
     dplyr::select(parcel_ref, post_habitat_name, post_enhancement_units) %>%
+    dplyr::mutate(post_enhancement_units = round(as.numeric(post_enhancement_units), 4)) %>%
     dplyr::filter(!is.na(post_habitat_name))
 
 

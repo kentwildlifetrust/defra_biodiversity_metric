@@ -52,10 +52,17 @@ get_baseline <- function(filepath, section = c("off-site", "on-site"), module = 
       .x %in% c("baseline_units_enhanced", "units_enhanced") ~ "baseline_enhancement_units",
       .x %in% c("area_habitat_lost", "area_lost", "length_lost") ~ "lost_size",
       .x == "units_lost" ~ "lost_units",
-
       .default = .x
     )) %>%
     dplyr::select(parcel_ref, baseline_habitat_name, baseline_size, baseline_units, enhancement_size, baseline_enhancement_units, lost_size, lost_units) %>%
+    dplyr::mutate(
+      baseline_size = round(as.numeric(baseline_size), 4),
+      baseline_units = round(as.numeric(baseline_units), 4),
+      enhancement_size = round(as.numeric(enhancement_size), 4),
+      baseline_enhancement_units = round(as.numeric(baseline_enhancement_units), 4),
+      lost_size = round(as.numeric(lost_size), 4),
+      lost_units = round(as.numeric(lost_units), 4)
+    ) %>%
     dplyr::filter(!is.na(baseline_habitat_name))
 
 
