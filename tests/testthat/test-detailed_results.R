@@ -229,5 +229,10 @@ test_that("detailed results get extracted correctly", {
                              haffenden_farm$habitat_name == "Woodland and forest"] <- 9.6562
 
   file_path <- system.file("metric_examples", "haffenden_farm.xlsm", package = "DefraBiodiversityMetric")
-  expect_equal(get_detailed_results(file_path), haffenden_farm)
+  actual <- get_detailed_results(file_path)
+  expected <- haffenden_farm %>%
+    dplyr::filter(!(baseline_size == 0 & baseline_units == 0 &
+                      post_size == 0 & post_units == 0 &
+                      net_size == 0 & net_units == 0))
+  expect_equal(actual, expected)
 })

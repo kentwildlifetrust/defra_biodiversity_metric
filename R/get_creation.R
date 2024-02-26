@@ -54,7 +54,7 @@ get_creation <- function(filepath, section = c("off-site", "on-site"), module = 
     )) %>%
     dplyr::select(post_habitat_name, creation_size, post_creation_units) %>%
     dplyr::mutate(post_creation_units = round(as.numeric(post_creation_units), 4),
-                  creation_size = round(as.numeric(creation_size))) %>%
+                  creation_size = round(as.numeric(creation_size), 4)) %>%
     dplyr::filter(!is.na(post_habitat_name))
 
 

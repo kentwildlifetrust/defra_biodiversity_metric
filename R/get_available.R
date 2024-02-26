@@ -1,15 +1,15 @@
 get_available <- function(filepath, section = c("off-site", "on-site"), module = c("area", "hedgerow", "watercourse")) {
 
-  baseline <- get_baseline(filepath, section, module)
+  baseline <- get_baseline(filepath, section, module) %>%
+    dplyr::mutate_if(is.numeric, function(x) replace(x, is.na(x), 0))
+
   #get baseline, enhancement and creation data
-  enhancement <- baseline %>%
-    dplyr::left_join(get_enhancement(filepath, section, module),
-                     dplyr::join_by("parcel_ref")) %>%
-    dplyr::mutate(available_enhancement_units = post_enhancement_units - baseline_enhancement_units) %>%
+  enhancement <- get_enhancement(filepath, section, module) %>%
+    dplyr::left_join(baseline,dplyr::join_by("parcel_ref")) %>%
     dplyr::group_by(post_habitat_name) %>%
     dplyr::summarise(
       enhancement_size = sum(enhancement_size),
-      available_enhancement_units = sum(available_enhancement_units)
+      available_enhancement_units = sum(post_enhancement_units - baseline_enhancement_units)
     )
 
 
@@ -17,7 +17,7 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
     dplyr::group_by(post_habitat_name) %>%
     dplyr::summarise(post_creation_units = sum(post_creation_units),
                      creation_size = sum(creation_size)) %>%
-    dplyr::left_join(baseline %>%
+    dplyr::full_join(baseline %>%
                        dplyr::group_by(baseline_habitat_name) %>%
                        dplyr::summarise(lost_units = sum(lost_units)),
                      join_by(post_habitat_name == baseline_habitat_name)) %>%
@@ -34,6 +34,7 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
                   module == m) %>%
     dplyr::left_join(enhancement, dplyr::join_by(habitat_name == post_habitat_name)) %>%
     dplyr::left_join(creation, dplyr::join_by(habitat_name == post_habitat_name)) %>%
+    dplyr::mutate_if(is.numeric, function(x) replace(x, is.na(x), 0)) %>%
     dplyr::mutate(available_units = available_enhancement_units + available_creation_units) %>%
     dplyr::select(habitat_name, available_units)
 

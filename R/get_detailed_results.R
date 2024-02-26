@@ -36,9 +36,13 @@ get_detailed_results <- function(filepath){
       net_size = round(as.numeric(net_size), 4),
       net_units = round(as.numeric(net_units), 4)
     ) %>%
+
     dplyr::select(section, module, habitat_name, baseline_size, baseline_units, post_size, post_units, net_size, net_units) %>%
     dplyr::arrange(section, module, habitat_name) %>%
-    as.data.frame()
+    as.data.frame() %>%
+    dplyr::filter(!(baseline_size == 0 & baseline_units == 0 &
+                    post_size == 0 & post_units == 0 &
+                    net_size == 0 & net_units == 0))
 
   return(detailed_results)
 }
