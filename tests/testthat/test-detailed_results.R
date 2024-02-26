@@ -1,3 +1,11 @@
+test_that("headline results extract", {
+  for (file in list.files(system.file("metric_examples", package = "DefraBiodiversityMetric"))) {
+    file_path <- system.file("metric_examples", file, package = "DefraBiodiversityMetric")
+    expect_equal(class(get_headline_results(file_path)), "data.frame")
+  }
+})
+
+
 template_df <- data.frame(
   section = sapply(c("combined", "off-site", "on-site"), rep, times = 33) %>%
     as.vector(),

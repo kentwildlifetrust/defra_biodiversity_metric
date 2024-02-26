@@ -3,15 +3,15 @@ get_detailed_results <- function(filepath){
   detailed_results <- readxl::read_excel(filepath,
                                          sheet = "Detailed Results",
                                          range = "B36:H207",
-                                         col_names = c(letters[1:7])) %>%
+                                         col_names = c(LETTERS[1:7])) %>%
     as.data.frame() %>%
-    dplyr::rename(habitat_name = a,
-                  baseline_size = b,
-                  baseline_units = c,
-                  post_size = d,
-                  post_units = e,
-                  net_size = f,
-                  net_units = g) %>%
+    dplyr::rename(habitat_name = A,
+                  baseline_size = B,
+                  baseline_units = C,
+                  post_size = D,
+                  post_units = E,
+                  net_size = F,
+                  net_units = G) %>%
     dplyr::filter(!is.na(net_units)) %>%
     dplyr::mutate(section = case_when(
                     grepl("On-site", baseline_size) ~ "on-site",
