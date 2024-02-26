@@ -7,7 +7,7 @@ test_that("headline results extract", {
 
 
 template_df <- data.frame(
-  section = sapply(c("combined", "off-site", "on-site"), rep, times = 33) %>%
+  section = rep(c("combined", "off-site", "on-site"), each = 33) %>%
     as.vector(),
   module = rep(c(rep("area", 15),
                rep("hedgerow", 13),

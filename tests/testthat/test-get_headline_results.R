@@ -8,7 +8,7 @@ test_that("headline results extract", {
 template_df <- data.frame(
   section = c(rep("off-site", 9),
               rep("on-site", 9)),
-  module = rep(sapply(c("area", "hedgerow", "watercourse"), rep, times = 3), 2),
+  module = rep(rep(c("area", "hedgerow", "watercourse"), each = 3), 2),
   type = rep(c("base", "net", "post"), 6),
   units = rep(0, 18)
 )

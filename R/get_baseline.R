@@ -1,39 +1,29 @@
 get_baseline <- function(filepath, section = c("off-site", "on-site"), module = c("area", "hedgerow", "watercourse")){
 
-  if (section == "on-site" & module == "area") {
-    sheet_name <- "A-1 On-Site Habitat Baseline"
-    range <- "D9:X258"
-    col_names <- LETTERS[4:24]
-  } else if (section == "on-site" & module == "hedgerow") {
-    sheet_name <- "B-1 On-Site Hedge Baseline"
-    range <- "B8:X257"
-    col_names <- LETTERS[2:24]
-  } else if (section == "on-site" & module == "watercourse") {
-    sheet_name <- "C-1 On-Site WaterC' Baseline"
-    range <- "C8:Z257"
-    col_names <- LETTERS[3:26]
-  } else if (section == "off-site" & module == "area") {
-    sheet_name <- "D-1 Off-Site Habitat Baseline"
-    range <- "D9:AA258"
-    col_names <- c(LETTERS[4:26], "AA")
-  } else if (section == "off-site" & module == "hedgerow") {
-    sheet_name <- "E-1 Off-Site Hedge Baseline"
-    range <- "B8:X257"
-    col_names <- LETTERS[2:24]
-  } else if (section == "off-site" & module == "watercourse") {
-    sheet_name <- "F-1 Off-Site WaterC' Baseline"
-    range <- "C8:AC257"
-    col_names <- c(LETTERS[3:26], "AA", "AB", "AC")
-  } else {
+  baseline_lookup <- data.frame(
+    section = rep(c("on-site", "off-site"), each = 3),
+    module = rep(c("area", "hedgerow", "watercourse"), 2),
+    sheet_name = c("A-1 On-Site Habitat Baseline",
+                   "B-1 On-Site Hedge Baseline",
+                   "C-1 On-Site WaterC' Baseline",
+                   "D-1 Off-Site Habitat Baseline",
+                   "E-1 Off-Site Hedge Baseline",
+                   "F-1 Off-Site WaterC' Baseline"),
+    range = c("D9:X258", "B8:X257", "C8:Z257", "D9:AA258", "B8:X257", "C8:AC257")
+  )
+
+  selected <- which(baseline_lookup$section == section & baseline_lookup$module == module)
+
+  if (length(selected) == 0) {
     stop("Invalid section or module")
   }
 
   baseline <- readxl::read_excel(filepath,
-                                 sheet = sheet_name,
-                                 range = range,
-                                 col_names = col_names) %>%
+                                 sheet = baseline_lookup$sheet_name[selected],
+                                 range = baseline_lookup$range[selected],
+                                 col_names = letter_cols(get_num_cols(baseline_lookup$range[selected]))) %>%
     as.data.frame() %>%
-    dplyr::select(which(!is.na(.[2,])))
+    dplyr::select(which(!is.na(.[2, ])))
 
   names(baseline) <- baseline[2, ] %>%
     as.character() %>%
@@ -55,18 +45,18 @@ get_baseline <- function(filepath, section = c("off-site", "on-site"), module = 
     dplyr::rename_with(~ case_when(
       #off-site habitat baseline
       .x %in% "ref" ~ "parcel_ref",
-      .x %in% c("broad_habitat", "habitat_type", "watercourse_type") ~ "habitat_name",
+      .x %in% c("broad_habitat", "habitat_type", "watercourse_type") ~ "baseline_habitat_name",
       .x %in% c("area_hectares", "length_km") ~ "baseline_size",
       .x %in% c("total_habitat_units", "total_hedgerow_units", "total_watercourse_units") ~ "baseline_units",
-      .x %in% c("area_enhanced", "length_enhanced") ~ "baseline_enhancement_size",
+      .x %in% c("area_enhanced", "length_enhanced") ~ "enhancement_size",
       .x %in% c("baseline_units_enhanced", "units_enhanced") ~ "baseline_enhancement_units",
       .x %in% c("area_habitat_lost", "area_lost", "length_lost") ~ "lost_size",
       .x == "units_lost" ~ "lost_units",
 
       .default = .x
     )) %>%
-    dplyr::select(parcel_ref, habitat_name, baseline_size, baseline_units, baseline_enhancement_size, baseline_enhancement_units, lost_size, lost_units) %>%
-    dplyr::filter(!is.na(habitat_name))
+    dplyr::select(parcel_ref, baseline_habitat_name, baseline_size, baseline_units, enhancement_size, baseline_enhancement_units, lost_size, lost_units) %>%
+    dplyr::filter(!is.na(baseline_habitat_name))
 
 
   return(baseline)
