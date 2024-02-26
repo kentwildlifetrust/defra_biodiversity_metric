@@ -2,28 +2,28 @@ get_baseline <- function(filepath, section = c("off-site", "on-site"), module = 
 
   if (section == "on-site" & module == "area") {
     sheet_name <- "A-1 On-Site Habitat Baseline"
-    range <- "E9:X258"
-    col_names <- LETTERS[5:24]
+    range <- "D9:X258"
+    col_names <- LETTERS[4:24]
   } else if (section == "on-site" & module == "hedgerow") {
     sheet_name <- "B-1 On-Site Hedge Baseline"
-    range <- "C8:X257"
-    col_names <- LETTERS[3:24]
+    range <- "B8:X257"
+    col_names <- LETTERS[2:24]
   } else if (section == "on-site" & module == "watercourse") {
     sheet_name <- "C-1 On-Site WaterC' Baseline"
-    range <- "D8:Z257"
-    col_names <- LETTERS[4:26]
+    range <- "C8:Z257"
+    col_names <- LETTERS[3:26]
   } else if (section == "off-site" & module == "area") {
     sheet_name <- "D-1 Off-Site Habitat Baseline"
-    range <- "E9:AA258"
-    col_names <- c(LETTERS[5:26], "AA")
+    range <- "D9:AA258"
+    col_names <- c(LETTERS[4:26], "AA")
   } else if (section == "off-site" & module == "hedgerow") {
     sheet_name <- "E-1 Off-Site Hedge Baseline"
-    range <- "C8:X257"
-    col_names <- LETTERS[3:24]
+    range <- "B8:X257"
+    col_names <- LETTERS[2:24]
   } else if (section == "off-site" & module == "watercourse") {
     sheet_name <- "F-1 Off-Site WaterC' Baseline"
-    range <- "D8:AC257"
-    col_names <- c(LETTERS[4:26], "AA", "AB", "AC")
+    range <- "C8:AC257"
+    col_names <- c(LETTERS[3:26], "AA", "AB", "AC")
   } else {
     stop("Invalid section or module")
   }
@@ -42,8 +42,7 @@ get_baseline <- function(filepath, section = c("off-site", "on-site"), module = 
 
 
   baseline <- baseline %>%
-    dplyr::slice(-c(1, 2)) %>%
-    dplyr::filter(!is.na(.[,1]))
+    dplyr::slice(-c(1, 2))
 
   #get rid of the habitat type column for area module
   if (module == "area") {
@@ -55,6 +54,7 @@ get_baseline <- function(filepath, section = c("off-site", "on-site"), module = 
   baseline <- baseline %>%
     dplyr::rename_with(~ case_when(
       #off-site habitat baseline
+      .x %in% "ref" ~ "parcel_ref",
       .x %in% c("broad_habitat", "habitat_type", "watercourse_type") ~ "habitat_name",
       .x %in% c("area_hectares", "length_km") ~ "baseline_size",
       .x %in% c("total_habitat_units", "total_hedgerow_units", "total_watercourse_units") ~ "baseline_units",
@@ -65,7 +65,8 @@ get_baseline <- function(filepath, section = c("off-site", "on-site"), module = 
 
       .default = .x
     )) %>%
-    dplyr::select(habitat_name, baseline_size, baseline_units, baseline_enhancement_size, baseline_enhancement_units, lost_size, lost_units)
+    dplyr::select(parcel_ref, habitat_name, baseline_size, baseline_units, baseline_enhancement_size, baseline_enhancement_units, lost_size, lost_units) %>%
+    dplyr::filter(!is.na(habitat_name))
 
 
   return(baseline)
