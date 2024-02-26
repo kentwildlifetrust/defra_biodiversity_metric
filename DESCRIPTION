@@ -1,0 +1,11 @@
+Package: DefraBiodiversityMetric
+Type: Package
+Title: Tools for working with the UK DEFRA Biodiversity Metric
+Version: 0.0.1.0
+Author: Euan Mckenzie
+Imports: 
+    dplyr,
+    readxl
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
