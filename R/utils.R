@@ -1,3 +1,8 @@
+#' Util functions
+#'
+#' Functions to assist with extraction of data from spreadsheets, particularly renaming columns.
+#' @export
+#'
 get_num_cols <- function(cell_range) {
   # Extract the column range from the cell range
   cols <- gsub("[0-9]", "", cell_range)

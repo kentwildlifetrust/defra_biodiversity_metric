@@ -1,3 +1,12 @@
+#' Extract habitat enhancement details
+#'
+#' Extracts details from the habitat enhancement parts of the metric spreadsheet.
+#' @param filepath The path to the metric spreadsheet.
+#' @param section The section of the metric spreadsheet to extract data from. Can be either "off-site" or "on-site".
+#' @param module The module of the metric spreadsheet to extract data from. Can be either "area", "hedgerow" or "watercourse".
+#' @return A data table including parcel_ref, post_habitat_name, post_enhancement_units.
+#' @export
+#'
 get_enhancement <- function(filepath, section = c("off-site", "on-site"), module = c("area", "hedgerow", "watercourse")){
 
   enhancement_lookup <- data.frame(

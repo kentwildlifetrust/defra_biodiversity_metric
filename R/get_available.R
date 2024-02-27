@@ -1,3 +1,12 @@
+#' Extract available units
+#'
+#' Extracts the available units for each broad area habitat, or hedgerow or watercourse type.
+#' @param filepath The path to the metric spreadsheet.
+#' @param section The section of the metric spreadsheet to extract data from. Can be either "off-site" or "on-site".
+#' @param module The module of the metric spreadsheet to extract data from. Can be either "area", "hedgerow" or "watercourse".
+#' @return A data table including habitat_name, available_units and other relevant columns.
+#' @export
+#'
 get_available <- function(filepath, section = c("off-site", "on-site"), module = c("area", "hedgerow", "watercourse")) {
 
   baseline <- get_baseline(filepath, section, module) %>%

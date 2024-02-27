@@ -1,3 +1,12 @@
+#' Extract habitat creation details
+#'
+#' Extracts details from the habitat creation parts of the metric spreadsheet.
+#' @param filepath The path to the metric spreadsheet.
+#' @param section The section of the metric spreadsheet to extract data from. Can be either "off-site" or "on-site".
+#' @param module The module of the metric spreadsheet to extract data from. Can be either "area", "hedgerow" or "watercourse".
+#' @return A data table including post_habitat_name, creation_size and post_creation_units.
+#' @export
+#'
 get_creation <- function(filepath, section = c("off-site", "on-site"), module = c("area", "hedgerow", "watercourse")){
 
   creation_lookup <- data.frame(
