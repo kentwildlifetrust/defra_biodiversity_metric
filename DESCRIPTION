@@ -6,7 +6,9 @@ Author: Euan Mckenzie
 Imports: 
     dplyr,
     readxl,
-    snakecase
+    snakecase,
+    stringr,
+    tidyr
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
