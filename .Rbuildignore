@@ -1,5 +1,6 @@
 ^renv$
 ^renv\.lock$
-^.*\.Rproj$
+^defraBiodiversityMetric\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^inst/

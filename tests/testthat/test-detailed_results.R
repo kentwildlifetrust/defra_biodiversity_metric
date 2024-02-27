@@ -1,6 +1,6 @@
 test_that("headline results extract", {
-  for (file in list.files(system.file("metric_examples", package = "defraBiodiversityMetric"))) {
-    file_path <- system.file("metric_examples", file, package = "defraBiodiversityMetric")
+  for (file in list.files(system.file("extdata", package = "defraBiodiversityMetric"))) {
+    file_path <- system.file("extdata", file, package = "defraBiodiversityMetric")
     expect_equal(class(get_headline_results(file_path)), "data.frame")
   }
 })
@@ -228,7 +228,7 @@ test_that("detailed results get extracted correctly", {
                              haffenden_farm$module == "area" &
                              haffenden_farm$habitat_name == "Woodland and forest"] <- 9.6562
 
-  file_path <- system.file("metric_examples", "haffenden_farm.xlsm", package = "defraBiodiversityMetric")
+  file_path <- system.file("extdata", "haffenden_farm.xlsm", package = "defraBiodiversityMetric")
   actual <- get_detailed_results(file_path)
   expected <- haffenden_farm %>%
     dplyr::filter(!(baseline_size == 0 & baseline_units == 0 &

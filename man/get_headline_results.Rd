@@ -8,14 +8,10 @@ get_headline_results(filepath)
 }
 \arguments{
 \item{filepath}{The path to the metric spreadsheet.}
-
-\item{section}{The section of the metric spreadsheet to extract data from. Can be either "off-site" or "on-site".}
-
-\item{module}{The module of the metric spreadsheet to extract data from. Can be either "area", "hedgerow" or "watercourse".}
 }
 \value{
 A data table including section, module, type of figure and units.
 }
 \description{
-Extracts headline results from the metric spreadsheet.
+Extract headline results
 }

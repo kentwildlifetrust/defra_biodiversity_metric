@@ -1,11 +1,14 @@
 Package: defraBiodiversityMetric
-Type: Package
-Title: Tools for working with the UK DEFRA Biodiversity Metric
-Version: 0.0.2.0
-Authors@R: person('Euan', 'Mckenzie', email = 'euan.mckenzie@kentwildlife.org.uk', role = c('cre', 'aut'))
-Description: Imports data from the UK DEFRA Biodiversity Metric.
+Title: Tools for the UK DEFRA Biodiversity Metric
+Version: 0.0.3.0
+Authors@R: 
+    person("Euan", "Mckenzie", , "euan.mckenzie@kentwildlife.org.uk", role = c("aut", "cre"))
+Description: Currently it just lets you extract data from the UK DEFRA Biodiversity Metric spreadsheet.
 License: MIT + file LICENSE
-Imports:
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports: 
     dplyr,
     magrittr,
     readxl,
@@ -14,7 +17,4 @@ Imports:
     tidyr
 Suggests: 
     testthat (>= 3.0.0)
-Encoding: UTF-8
 Config/testthat/edition: 3
-RoxygenNote: 7.3.1
-Language: en-GB

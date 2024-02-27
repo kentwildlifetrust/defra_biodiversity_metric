@@ -1,11 +1,10 @@
 #' Extract headline results
 #'
-#' Extracts headline results from the metric spreadsheet.
 #' @param filepath The path to the metric spreadsheet.
-#' @param section The section of the metric spreadsheet to extract data from. Can be either "off-site" or "on-site".
-#' @param module The module of the metric spreadsheet to extract data from. Can be either "area", "hedgerow" or "watercourse".
+#'
 #' @return A data table including section, module, type of figure and units.
 #' @export
+#'
 #'
 get_headline_results <- function(filepath){
 
@@ -28,26 +27,26 @@ get_headline_results <- function(filepath){
                     unname()) %>%
     dplyr::filter(!grepl("Off-site unit change", figure_type)) %>%
     dplyr::mutate(module = dplyr::case_when(
-                    module == "Habitat units" ~ "area",
-                    module == "Hedgerow units" ~ "hedgerow",
-                    module == "Watercourse units" ~ "watercourse",
-                    .default = NA
-                  ),
-                  section = dplyr::case_when(
-                    grepl("On-site", figure_type) ~ "on-site",
-                    grepl("Off-site", figure_type) ~ "off-site",
-#                    grepl("Combined net", figure_type) ~ "combined",
-#                    grepl("Spatial risk multiplier", figure_type) ~ "combined",
-                    .default = NA
-                  ),
-                  type = dplyr::case_when(
-                    grepl("baseline", figure_type) ~ "base",
-                    grepl("post-intervention", figure_type) ~ "post",
-                    grepl("net change", figure_type) ~ "net",
-                    grepl("net unit change", figure_type) ~ "net",
-                    grepl("Spatial risk multiplier", figure_type) ~ "spatial deduction",
-                    .default = NA
-                  )) %>%
+      module == "Habitat units" ~ "area",
+      module == "Hedgerow units" ~ "hedgerow",
+      module == "Watercourse units" ~ "watercourse",
+      .default = NA
+    ),
+    section = dplyr::case_when(
+      grepl("On-site", figure_type) ~ "on-site",
+      grepl("Off-site", figure_type) ~ "off-site",
+      #                    grepl("Combined net", figure_type) ~ "combined",
+      #                    grepl("Spatial risk multiplier", figure_type) ~ "combined",
+      .default = NA
+    ),
+    type = dplyr::case_when(
+      grepl("baseline", figure_type) ~ "base",
+      grepl("post-intervention", figure_type) ~ "post",
+      grepl("net change", figure_type) ~ "net",
+      grepl("net unit change", figure_type) ~ "net",
+      grepl("Spatial risk multiplier", figure_type) ~ "spatial deduction",
+      .default = NA
+    )) %>%
     dplyr::select(section,
                   module,
                   type,
