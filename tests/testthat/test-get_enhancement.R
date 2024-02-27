@@ -1,6 +1,6 @@
 test_that("enhancement details extract", {
-  for (file in list.files(system.file("metric_examples", package = "DefraBiodiversityMetric"))) {
-    file_path <- system.file("metric_examples", file, package = "DefraBiodiversityMetric")
+  for (file in list.files(system.file("metric_examples", package = "defraBiodiversityMetric"))) {
+    file_path <- system.file("metric_examples", file, package = "defraBiodiversityMetric")
     expect_equal(class(get_enhancement(file_path, section = "off-site", module = "area")), "data.frame")
     expect_equal(class(get_enhancement(file_path, section = "off-site", module = "hedgerow")), "data.frame")
     expect_equal(class(get_enhancement(file_path, section = "off-site", module = "watercourse")), "data.frame")

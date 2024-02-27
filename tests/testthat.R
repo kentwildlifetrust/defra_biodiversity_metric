@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(DefraBiodiversityMetric)
+library(defraBiodiversityMetric)
 
-test_check("DefraBiodiversityMetric")
+test_check("defraBiodiversityMetric")
