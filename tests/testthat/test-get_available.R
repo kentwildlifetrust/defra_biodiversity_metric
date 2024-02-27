@@ -20,7 +20,7 @@ test_that("expected total available units", {
         s <- section
         m <- module
         available <- get_available(file_path, section = section, module = module) %>%
-          pull(available_units) %>%
+          dplyr::pull(available_units) %>%
           sum() %>%
           round(2)
         expected <- get_detailed_results(file_path) %>%

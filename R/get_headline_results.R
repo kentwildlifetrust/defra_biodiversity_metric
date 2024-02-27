@@ -27,20 +27,20 @@ get_headline_results <- function(filepath){
                     unlist() %>%
                     unname()) %>%
     dplyr::filter(!grepl("Off-site unit change", figure_type)) %>%
-    dplyr::mutate(module = case_when(
+    dplyr::mutate(module = dplyr::case_when(
                     module == "Habitat units" ~ "area",
                     module == "Hedgerow units" ~ "hedgerow",
                     module == "Watercourse units" ~ "watercourse",
                     .default = NA
                   ),
-                  section = case_when(
+                  section = dplyr::case_when(
                     grepl("On-site", figure_type) ~ "on-site",
                     grepl("Off-site", figure_type) ~ "off-site",
 #                    grepl("Combined net", figure_type) ~ "combined",
 #                    grepl("Spatial risk multiplier", figure_type) ~ "combined",
                     .default = NA
                   ),
-                  type = case_when(
+                  type = dplyr::case_when(
                     grepl("baseline", figure_type) ~ "base",
                     grepl("post-intervention", figure_type) ~ "post",
                     grepl("net change", figure_type) ~ "net",

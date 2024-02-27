@@ -13,13 +13,13 @@ get_detailed_results <- function(filepath){
                   net_size = F,
                   net_units = G) %>%
     dplyr::filter(!is.na(net_units)) %>%
-    dplyr::mutate(section = case_when(
+    dplyr::mutate(section = dplyr::case_when(
                     grepl("On-site", baseline_size) ~ "on-site",
                     grepl("Off-site", baseline_size) ~ "off-site",
                     grepl("Combined", baseline_size) ~ "combined",
                     .default = NA
                   ),
-                  module = case_when(
+                  module = dplyr::case_when(
                     habitat_name == "Habitat group" ~ "area",
                     habitat_name == "Hedgerow type" ~ "hedgerow",
                     habitat_name == "Watercourse type" ~ "watercourse",

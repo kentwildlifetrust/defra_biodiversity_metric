@@ -51,7 +51,7 @@ get_baseline <- function(filepath, section = c("off-site", "on-site"), module = 
 
     #rename columns so important ones are same for all modules
   baseline <- baseline %>%
-    dplyr::rename_with(~ case_when(
+    dplyr::rename_with(~ dplyr::case_when(
       #off-site habitat baseline
       .x %in% "ref" ~ "parcel_ref",
       .x %in% c("broad_habitat", "habitat_type", "watercourse_type") ~ "baseline_habitat_name",

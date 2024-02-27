@@ -31,7 +31,7 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
     dplyr::full_join(baseline %>%
                        dplyr::group_by(baseline_habitat_name) %>%
                        dplyr::summarise(lost_units = sum(lost_units)),
-                     join_by(post_habitat_name == baseline_habitat_name)) %>%
+                     dplyr::join_by(post_habitat_name == baseline_habitat_name)) %>%
     dplyr::mutate_if(is.numeric, function(x) replace(x, is.na(x), 0)) %>%
     dplyr::mutate(available_creation_units = post_creation_units -
                     (creation_size / sum(creation_size)) * sum(lost_units)) %>%

@@ -54,7 +54,7 @@ get_enhancement <- function(filepath, section = c("off-site", "on-site"), module
 
   #rename columns so important ones are same for all modules
   enhancement <- enhancement %>%
-    dplyr::rename_with(~ case_when(
+    dplyr::rename_with(~ dplyr::case_when(
       #off-site habitat enhancement
       .x %in% "baseline_ref" ~ "parcel_ref",
       .x %in% c("proposed_broad_habitat", "proposed_habitat") ~ "post_habitat_name",

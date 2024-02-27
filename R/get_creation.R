@@ -54,7 +54,7 @@ get_creation <- function(filepath, section = c("off-site", "on-site"), module = 
 
   #rename columns so important ones are same for all modules
   creation <- creation %>%
-    dplyr::rename_with(~ case_when(
+    dplyr::rename_with(~ dplyr::case_when(
       #off-site habitat creation
       .x %in% c("broad_habitat", "habitat_type", "watercourse_type") ~ "post_habitat_name",
       .x %in% c("area_hectares", "length_km") ~ "creation_size",
