@@ -41,8 +41,7 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
     stop("The total available units from creation is less than 0. Please check the metric.")
   } else if (sum(creation$available_creation_units) == 0) {
     creation <- creation %>%
-      dplyr::mutate(available_creation_units = 0,
-                    subtracted_units = 0)
+      dplyr::mutate(available_creation_units = 0)
   } else {
     creation <- creation %>%
       dplyr::mutate(available_creation_units = ifelse(available_creation_units < 0,
@@ -51,12 +50,10 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
 
     total_discrepancy <- sum(creation$available_creation_units -
                                (creation$post_creation_units - creation$lost_units))
-
     creation <- creation %>%
       dplyr::mutate(available_creation_units =
-                      available_creation_units - total_discrepancy * available_creation_units / sum(available_creation_units)) %>%
-      dplyr::mutate(subtracted_units = post_creation_units - available_creation_units) %>%
-      dplyr::mutate(subtracted_units = ifelse(subtracted_units < 0, 0, subtracted_units))
+                      available_creation_units - total_discrepancy * available_creation_units / sum(available_creation_units))
+
   }
 
   #start with detailed results
@@ -68,8 +65,10 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
     dplyr::left_join(enhancement, dplyr::join_by(habitat_name == post_habitat_name)) %>%
     dplyr::left_join(creation, dplyr::join_by(habitat_name == post_habitat_name)) %>%
     dplyr::mutate_if(is.numeric, function(x) replace(x, is.na(x), 0)) %>%
-    dplyr::mutate_if(is.numeric, function(x) round(x, 4)) %>%
     dplyr::mutate(available_units = available_enhancement_units + available_creation_units) %>%
+    dplyr::mutate(subtracted_units = net_units - available_units) %>%
+    dplyr::mutate(subtracted_units = ifelse(subtracted_units < 0, 0, subtracted_units)) %>%
+    dplyr::mutate_if(is.numeric, function(x) round(x, 4)) %>%
     dplyr::select(habitat_name, baseline_units, post_units, post_enhancement_units,
                   baseline_enhancement_units, available_enhancement_units, creation_size,
                   post_creation_units, lost_units, available_creation_units, subtracted_units,
