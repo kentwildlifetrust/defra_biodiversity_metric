@@ -34,3 +34,27 @@ test_that("expected total available units", {
     }
   }
 })
+
+
+test_that("expected subtracted = lost", {
+  for (file in list.files(system.file("extdata", package = "defraBiodiversityMetric"))) {
+    file_path <- system.file("extdata", file, package = "defraBiodiversityMetric")
+
+    for (section in c("off-site", "on-site")) {
+      for (module in c("area", "hedgerow", "watercourse")) {
+        s <- section
+        m <- module
+        available <- get_available(file_path, section = section, module = module)
+        lost <- available %>%
+          dplyr::pull(lost_units) %>%
+          sum() %>%
+          round(2)
+        subtracted <-available %>%
+          dplyr::pull(subtracted_units) %>%
+          sum() %>%
+          round(2)
+        expect_equal(lost, subtracted)
+      }
+    }
+  }
+})

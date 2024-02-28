@@ -39,21 +39,25 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
 
   if (sum(creation$available_creation_units) < 0) {
     stop("The total available units from creation is less than 0. Please check the metric.")
+  } else if (sum(creation$available_creation_units) == 0) {
+    creation <- creation %>%
+      dplyr::mutate(available_creation_units = 0,
+                    subtracted_units = 0)
+  } else {
+    creation <- creation %>%
+      dplyr::mutate(available_creation_units = ifelse(available_creation_units < 0,
+                                                      0,
+                                                      available_creation_units))
+
+    total_discrepancy <- sum(creation$available_creation_units -
+                               (creation$post_creation_units - creation$lost_units))
+
+    creation <- creation %>%
+      dplyr::mutate(available_creation_units =
+                      available_creation_units - total_discrepancy * available_creation_units / sum(available_creation_units)) %>%
+      dplyr::mutate(subtracted_units = post_creation_units - available_creation_units) %>%
+      dplyr::mutate(subtracted_units = ifelse(subtracted_units < 0, 0, subtracted_units))
   }
-
-  creation <- creation %>%
-    dplyr::mutate(available_creation_units = ifelse(available_creation_units < 0,
-                                                    0,
-                                                    available_creation_units))
-
-  total_discrepancy <- sum(creation$available_creation_units -
-                             (creation$post_creation_units - creation$lost_units))
-
-  creation <- creation %>%
-    dplyr::mutate(available_creation_units =
-                    available_creation_units - total_discrepancy * available_creation_units / sum(available_creation_units)) %>%
-    dplyr::mutate(subtracted_units = post_creation_units - available_creation_units) %>%
-    dplyr::mutate(subtracted_units = ifelse(subtracted_units < 0, 0, subtracted_units))
 
   #start with detailed results
   s <- section
