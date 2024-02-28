@@ -1,14 +1,15 @@
-test_that("available units extract", {
-  for (file in list.files(system.file("extdata", package = "defraBiodiversityMetric"))) {
-    file_path <- system.file("extdata", file, package = "defraBiodiversityMetric")
+for (file in list.files(system.file("extdata", package = "defraBiodiversityMetric"))) {
+  file_path <- system.file("extdata", file, package = "defraBiodiversityMetric")
+
+  test_that(paste("available units extract from", file), {
     expect_equal(class(get_available(file_path, section = "off-site", module = "area")), "data.frame")
     expect_equal(class(get_available(file_path, section = "off-site", module = "hedgerow")), "data.frame")
     expect_equal(class(get_available(file_path, section = "off-site", module = "watercourse")), "data.frame")
     expect_equal(class(get_available(file_path, section = "on-site", module = "area")), "data.frame")
     expect_equal(class(get_available(file_path, section = "on-site", module = "hedgerow")), "data.frame")
     expect_equal(class(get_available(file_path, section = "on-site", module = "watercourse")), "data.frame")
-  }
-})
+  })
+}
 
 
 test_that("expected total available units", {
