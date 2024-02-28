@@ -67,7 +67,6 @@ get_available <- function(filepath, section = c("off-site", "on-site"), module =
     dplyr::mutate_if(is.numeric, function(x) replace(x, is.na(x), 0)) %>%
     dplyr::mutate(available_units = available_enhancement_units + available_creation_units) %>%
     dplyr::mutate(subtracted_units = net_units - available_units) %>%
-    dplyr::mutate(subtracted_units = ifelse(subtracted_units < 0, 0, subtracted_units)) %>%
     dplyr::mutate_if(is.numeric, function(x) round(x, 4)) %>%
     dplyr::select(habitat_name, baseline_units, post_units, post_enhancement_units,
                   baseline_enhancement_units, available_enhancement_units, creation_size,
