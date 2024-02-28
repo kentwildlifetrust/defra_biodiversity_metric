@@ -1,2 +1,4 @@
 .Rproj.user
-/inst/
+/inst/extdata/blackbarn_fields.xlsx
+/inst/extdata/coldharbour_farm.xlsx
+/inst/extdata/haffenden_farm.xlsm
