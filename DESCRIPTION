@@ -1,6 +1,6 @@
 Package: defraBiodiversityMetric
 Title: Tools for the UK DEFRA Biodiversity Metric
-Version: 0.0.8.0000
+Version: 0.0.9.0000
 Authors@R: 
     person("Euan", "Mckenzie", , "euan.mckenzie@kentwildlife.org.uk", role = c("aut", "cre"))
 Description: Currently it just lets you extract data from the UK DEFRA Biodiversity Metric spreadsheet.

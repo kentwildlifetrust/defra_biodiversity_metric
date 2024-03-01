@@ -2,7 +2,7 @@
 % Please edit documentation in R/make_sankey.R
 \name{make_sankey}
 \alias{make_sankey}
-\title{Title}
+\title{Show habitat changes as Sankey Diagram}
 \usage{
 make_sankey(
   filepath,
@@ -11,8 +11,17 @@ make_sankey(
 )
 }
 \arguments{
-\item{module}{}
+\item{filepath}{The path to the metric spreadsheet.}
+
+\item{section}{The section of the metric spreadsheet to extract data from. Can be either "off-site" or "on-site".}
+
+\item{module}{The module of the metric spreadsheet to extract data from. Can be either "area", "hedgerow" or "watercourse".}
+}
+\value{
+A Sankey Diagram showing habitat changes. Height of nodes represents area of habitat, colour represent density of BNG units.
+
+Sankey Diagram
 }
 \description{
-Title
+Show habitat changes as Sankey Diagram
 }

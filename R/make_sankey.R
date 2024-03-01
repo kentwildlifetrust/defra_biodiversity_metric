@@ -1,13 +1,14 @@
-#' Title
+#' Show habitat changes as Sankey Diagram
 #'
-#' @param filepath
-#' @param section
-#' @param module
+#' @param filepath The path to the metric spreadsheet.
+#' @param section The section of the metric spreadsheet to extract data from. Can be either "off-site" or "on-site".
+#' @param module The module of the metric spreadsheet to extract data from. Can be either "area", "hedgerow" or "watercourse".
+#' @return A Sankey Diagram showing habitat changes. Height of nodes represents area of habitat, colour represent density of BNG units.
 #'
-#' @return
+#' @return Sankey Diagram
 #' @export
 #'
-#' @examples
+#'
 make_sankey <- function(filepath, section = c("off-site", "on-site"), module = c("area", "hedgerow", "watercourse")) {
 
   baseline <- get_baseline(filepath, section, module) %>%
