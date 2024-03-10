@@ -42,6 +42,7 @@
 #' It is possible for the overall available units for a given habitat type to be be negative, if there are insufficient available enhancement units to cancel out a negative value of available creation units. In this case a result is still given, along with a warning message.
 #' In these cases it is recommended that available units are determined manually by the metric provider.
 #'
+#' @export
 get_available <- function(filepath, section = c("off-site", "on-site"), module = c("area", "hedgerow", "watercourse")) {
 
   baseline <- get_baseline(filepath, section, module) %>%
