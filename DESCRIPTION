@@ -12,6 +12,7 @@ Imports:
     dplyr,
     magrittr,
     mathjaxr,
+    networkD3,
     readxl,
     scales,
     snakecase,
