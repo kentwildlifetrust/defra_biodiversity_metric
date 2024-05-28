@@ -1,0 +1,939 @@
+---
+title: "How the Statutory Metric Spreadsheet Works"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{statutory_metric_spreadsheet}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(defraBiodiversityMetric)
+```
+
+## Introduction
+
+This document records how the [Statutory Biodiversity Metric](https://assets.publishing.service.gov.uk/media/65c60e83cc433b000ca90b32/The_Statutory_Biodiversity_Metric_Calculation_Tool_-_Macro_disabled_02.24.xlsx) calculates its figures. Initially it will focus only on how Habitat units are calculated in the Off-site part of the metric. It works from the bottom up.
+
+As I go through, I will be identifying tables and fields that are used in the calculation. I will be identifying primary and foreign keys where necessary.
+
+#### Get the metric
+
+We will be using the macro-disabled version of the spreadsheet, and the readxl package to get data from it. The spreadsheet was downloaded from <https://assets.publishing.service.gov.uk/media/65c60e83cc433b000ca90b32/The_Statutory_Biodiversity_Metric_Calculation_Tool_-_Macro_disabled_02.24.xlsx> and saved in the data folder in this repository as metric_sheets.rda.
+
+Formulas and lookup ranges for input validation are obtained from visual inspection in Microsoft Excel. The Spreadsheet was first unlocked by uploading to Google Drive and then downloading again.
+
+## D-1 Off-Site Habitat Baseline
+
+### Inputs
+
+This input table captures information about individual habitat parcels. The following inputs are included:
+
+-  **Broad Habitat:** a dropdown list of Broad Habitat types. This will be referred to by the name `broad_habitat`.
+
+-   **Habitat Type:** split into Broad habitat and Habitat type. Habitat Type updates with the Habitat Types that are within within the selected Broad Habitat. Each Habitat Type has an associated Distinctiveness category and score. This will be referred to by the name `habitat_label` to be consistent with the lookup values it is used with.
+
+-   **Irreplaceable Habitat:** is the habitat irreplaceable or not? Can either have a Yes & No option, just a No option or just a Yes option, based on the selected Habitat Type. This will be referred to by the name `irreplaceable_habitat`.
+
+-   **Area (hectares):** numeric input. This will be referred to by the name `area_ha`.
+
+-   **Condition:** options between Poor and Good. Different ones available for different selected Habitat Types. Associated with a score. This will be referred to by the name `condition`.
+
+-   **Strategic significance:** three options about how desirable the specific habitat is in its location for wider nature recovery. Each option has a name & description and a multiplier. This will be referred to by the name `strategic_significance`.
+
+-   **Spatial risk category:** a number of options to capture the risk from the geographic distance between the off-site and on-site locations. Not included in the habitat total column. This will be referred to by the name `spatial_risk`.
+
+-   **Area Retained & Area Enhanced:** how much of the habitat area entered is retained or enhanced? The remainder of the total area is assumed to be retained. These will be referred to by the names `area_retained_ha` and `area_enhanced_ha`.
+
+-   **Bespoke Compensation Agreed:** this is a Yes/No/Pending that is required depending on the selected Habitat Type.
+
+-   **Comment fields:** these are not used in the calculation and will be ignored.
+
+-   **Off-site reference:** assumed to all be filled in identically as 1.
+
+This input table will be referred to as `baseline_habitat_parcels`.
+
+### Input Lookups
+
+Several of the input fields have a dropdown list of options. These are looked up from other tables in the spreadsheet.
+
+#### `broad_habitat` & `habitat_label`
+
+```{r}
+#taken from E11
+sheet_range <- "'G-1 All Habitats'!$AF$3:$AF$17"
+#dollar signs mean this reference is same for all rows
+broad_habitat_names <- get_vals(sheet_range)$`Broad Habitats`
+broad_habitat_names
+```
+
+#### `habitat_label`
+
+Habitat Type is a dynamic dropdown list that depends on the selected Broad Habitat. The lookup range is different for each Broad Habitat.
+
+```{r}
+sheet_range <- "=INDIRECT(A11)"
+#This is a dynamic range that includes cells based on the value of A11, which is a reference
+
+formula_A11 <- '=IFERROR(INDEX(\'G-1 All Habitats\'!$AG$3:$AG$17,MATCH(E11,\'G-1 All Habitats\'!$AF$3:$AF$17,0)),"")'
+#This is a lookup formula that returns the value of A11 based on the value of E11 (Broad Habitat)
+#match gets the index of the value in E11 in the range AF3:AF17
+match_range <- get_vals("'G-1 All Habitats'!$AF$3:$AF$17")
+#index gets the value in the range AG3:AG17 at the index returned by match
+index_range <- get_vals("'G-1 All Habitats'!$AG$3:$AG$17")
+#compare the two ranges
+broad_habitats <- cbind(match_range, index_range)
+#this converts snackecase to sentence case. It is not clear where this is used.
+broad_habitats <- broad_habitats %>%
+  dplyr::mutate(broad_habitat_id = 1:nrow(.)) %>%
+  dplyr::select(broad_habitat_id,
+                broad_habitat_name = `Broad Habitats`)
+```
+
+```{r}
+#a guess would be to match using the sheet 'G-2 Habitat groups'
+habitat_types <- get_vals("'G-2 Habitat groups'!A4:B135")
+colnames(habitat_types) <- c("habitat_name", "broad_habitat_name")
+habitat_types <- habitat_types %>%
+  dplyr::full_join(broad_habitats, by = c("broad_habitat_name")) %>%
+  dplyr::mutate(habitat_type_id = 1:nrow(.))
+stopifnot(!any(duplicated(habitat_types)))
+
+habitat_types <- habitat_types %>%
+  dplyr::select(habitat_type_id,
+                habitat_name,
+                broad_habitat_id)
+
+#habitat labels are in a separate spreadsheet
+habitat_labels <- get_vals("'G-1 All Habitats'!A3:B135")
+colnames(habitat_labels) <- c("habitat_label", "habitat_name")
+habitat_labels <- habitat_labels %>%
+  dplyr::mutate(habitat_label_id = 1:nrow(.)) %>%
+  dplyr::left_join(habitat_types, by = "habitat_name")
+stopifnot(!any(duplicated(habitat_labels)))
+
+habitat_labels <- habitat_labels %>%
+  dplyr::select(habitat_label_id,
+                habitat_label,
+                habitat_type_id = habitat_type_id)
+
+
+#check
+# path <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/The_Statutory_Biodiversity_Metric_Calculation_Tool_-_Macro_disabled_02.24.xlsx"
+# path_edit <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/metric_edit.xlsx"
+# 
+# workbook <- openxlsx::loadWorkbook(path)
+# df <- data.frame(
+#   broad_habitat_name = "Grassland",
+#   habitat_name = "Arable field margins cultivated annually"
+# )
+# openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = df, startRow = 11, startCol = 5, colNames = F)
+# openxlsx::saveWorkbook(workbook, path_edit, overwrite = T)
+
+#check manually
+broad_habitat_name_val <- "Cropland"
+allowed_habitat_labels <- c("Arable field margins cultivated annually",
+              "Arable field margins game bird mix",
+              "Arable field margins pollen and nectar",
+              "Arable field margins tussocky",
+              "Cereal crops",
+              "Winter stubble",
+              "Horticulture",
+              "Intensive orchards",
+              "Non-cereal crops",
+              "Temporary grass and clover leys")
+baseline_habitats <- data.frame(
+  broad_habitat_name = broad_habitat_name_val,
+  habitat_label = allowed_habitat_labels
+)
+
+broad_habitat_name_val <- "Grassland"
+allowed_habitat_labels <- c("Traditional orchards",
+                            "Bracken",
+                            "Floodplain wetland mosaic and CFGM",
+                            "Lowland calcareous grassland",
+                            "Lowland dry acid grassland",
+                            "Lowland meadows",
+                            "Modified grassland",
+                            "Other lowland acid grassland",
+                            "Other neutral grassland",
+                            "Tall herb communities (H6430)",
+                            "Upland acid grassland",
+                            "Upland calcareous grassland",
+                            "Upland hay meadows")
+
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+broad_habitat_name_val <- "Heathland and shrub"
+allowed_habitat_labels <- c("Blackthorn scrub",
+                            "Bramble scrub",
+                            "Gorse scrub",
+                            "Hawthorn scrub",
+                            "Hazel scrub",
+                            "Lowland heathland",
+                            "Mixed scrub",
+                            "Mountain heaths and willow scrub",
+                            "Rhododendron scrub",
+                            "Dunes with sea buckthorn (H2160)",
+                            "Other sea buckthorn scrub",
+                            "Willow scrub",
+                            "Upland heathland")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Lakes"
+allowed_habitat_labels <- c("Aquifer fed naturally fluctuating water bodies",
+                            "Ornamental lake or pond",
+                            "High alkalinity lakes",
+                            "Low alkalinity lakes",
+                            "Marl lakes",
+                            "Moderate alkalinity lakes",
+                            "Peat lakes",
+                            "Ponds (priority habitat)",
+                            "Ponds (non-priority habitat)",
+                            "Reservoirs",
+                            "Temporary lakes ponds and pools (H3170)")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Sparsely vegetated land"
+allowed_habitat_labels <- c("Calaminarian grasslands",
+                            "Coastal sand dunes",
+                            "Coastal vegetated shingle",
+                            "Ruderal/Ephemeral",
+                            "Tall forbs",
+                            "Inland rock outcrop and scree habitats",
+                            "Limestone pavement",
+                            "Maritime cliff and slopes",
+                            "Other inland rock and scree")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Urban"
+allowed_habitat_labels <- c("Allotments",
+                            "Artificial unvegetated, unsealed surface",
+                            "Bioswale",
+                            "Intensive green roof",
+                            "Built linear features",
+                            "Cemeteries and churchyards",
+                            "Developed land; sealed surface",
+                            "Other green roof",
+                            "Facade-bound green wall",
+                            "Ground based green wall",
+                            "Ground level planters",
+                            "Biodiverse green roof",
+                            "Introduced shrub",
+                            "Open mosaic habitats on previously developed land",
+                            "Rain garden",
+                            "Actively worked sand pit quarry or open cast mine",
+                            "Sustainable drainage system",
+                            "Unvegetated garden",
+                            "Vacant or derelict land",
+                            "Bare ground",
+                            "Vegetated garden")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Wetland"
+allowed_habitat_labels <- c("Blanket bog",
+                            "Depressions on peat substrates (H7150)",
+                            "Fens (upland and lowland)",
+                            "Lowland raised bog",
+                            "Oceanic valley mire[1] (D2.1)",
+                            "Purple moor grass and rush pastures",
+                            "Reedbeds",
+                            "Transition mires and quaking bogs (H7140)")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Woodland and forest"
+allowed_habitat_labels <- c("Felled",
+                            "Lowland beech and yew woodland",
+                            "Lowland mixed deciduous woodland",
+                            "Native pine woodlands",
+                            "Other coniferous woodland",
+                            "Other Scot's pine woodland",
+                            "Other woodland; broadleaved",
+                            "Other woodland; mixed",
+                            "Upland birchwoods",
+                            "Upland mixed ashwoods",
+                            "Upland oakwood",
+                            "Wet woodland",
+                            "Wood-pasture and parkland")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Coastal lagoons"
+allowed_habitat_labels <- "Coastal lagoons"
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Rocky shore"
+allowed_habitat_labels <- c("High energy littoral rock",
+                            "High energy littoral rock - on peat, clay or chalk",
+                            "Moderate energy littoral rock",
+                            "Moderate energy littoral rock - on peat, clay or chalk",
+                            "Low energy littoral rock",
+                            "Low energy littoral rock - on peat, clay or chalk",
+                            "Features of littoral rock",
+                            "Features of littoral rock - on peat, clay or chalk")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Coastal saltmarsh"
+allowed_habitat_labels <- c("Saltmarshes and saline reedbeds",
+                            "Artificial saltmarshes and saline reedbeds")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Intertidal sediment"
+allowed_habitat_labels <- c("Littoral coarse sediment",
+                            "Littoral mud",
+                            "Littoral mixed sediments",
+                            "Littoral seagrass",
+                            "Littoral seagrass on peat, clay or chalk",
+                            "Littoral biogenic reefs - Mussels",
+                            "Littoral biogenic reefs - Sabellaria",
+                            "Features of littoral sediment",
+                            "Artificial littoral coarse sediment",
+                            "Artificial littoral mud",
+                            "Artificial littoral sand",
+                            "Artificial littoral muddy sand",
+                            "Artificial littoral mixed sediments",
+                            "Artificial littoral seagrass",
+                            "Artificial littoral biogenic reefs",
+                            "Littoral sand",
+                            "Littoral muddy sand")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Intertidal hard structures"
+allowed_habitat_labels <- c("Artificial hard structures",
+                            "Artificial features of hard structures",
+                            "Artificial hard structures with integrated greening of grey infrastructure (IGGI)")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Watercourse footprint"
+allowed_habitat_labels <- c("Watercourse footprint")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+
+broad_habitat_name_val <- "Individual trees"
+allowed_habitat_labels <- c("Urban tree", "Rural tree")
+baseline_habitats <- rbind(baseline_habitats,
+                           data.frame(
+                             broad_habitat_name = broad_habitat_name_val,
+                             habitat_label = allowed_habitat_labels
+                           ))
+  
+baseline_habitats$is_baseline <- TRUE
+
+habitat_labels <- habitat_labels %>%
+  dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
+  dplyr::left_join(broad_habitats, by = "broad_habitat_id") %>%
+  dplyr::left_join(baseline_habitats, by = c("habitat_label", "broad_habitat_name")) %>%
+  dplyr::mutate(is_baseline = dplyr::coalesce(is_baseline, FALSE)) %>%
+  dplyr::select(habitat_label_id, habitat_label, habitat_type_id, is_baseline)
+
+#there should be just one non baseline habitat: Replacement for felled woodland
+stopifnot(nrow(habitat_labels[!habitat_labels$is_baseline, ]) == 1)
+```
+
+In the above code, we have created a lookup table that maps habitat labels to habitat names. We have also identified the habitat that is not part of the baseline. This is the Replacement for felled woodland habitat.
+
+#### `irreplaceable_habitat`
+
+```{r}
+#ignore for now
+# sheet_range <- '=IF(AW11="Yes",$AX$11, IF(AW11="No", $AX$12,$AX$11:$AX$12))'
+# #This is a dynamic range that depends on the value of AW11
+# #When AW11 is Yes, the range is 'Yes'
+# #When AW11 is No, the range is 'No'
+# #When AW11 is Yes/No or any other value, the range is 'Yes' and 'No'
+# 
+# formula_AW11 <- '=IF(AV11="","",VLOOKUP(AV11,\'G-1 All Habitats\'!$B$1:$T$135,19,FALSE))'
+# #This is a lookup formula that returns the value of AW11 based on the value of AV11
+# formula_AV11 <- '=IFERROR(INDEX(\'G-1 All Habitats\'!$B$3:$B$135,MATCH(F11,\'G-1 All Habitats\'!$A$3:$A$135,0)),"")'
+# #This is a lookup formula that returns the value of AV11 based on the value of F11
+# #F11 is the habitat type
+# 
+# habitat_names <- get_vals("'G-1 All Habitats'!$B$3:$B$135")$`...2`
+# get_vals("'G-1 All Habitats\'!$A$3:$A$135")
+```
+
+#### `condition`
+
+```{r}
+#column K has a dynamic range
+sheet_range <- "=INDIRECT(B11)"
+formula_b11 <- '=IFERROR(INDEX(\'G-8 Condition Look up\'!$I$4:$I$135,MATCH(AV11,\'G-8 Condition Look up\'!$A$4:$A$135,0)),"")'
+
+match_range <- get_vals("'G-8 Condition Look up'!$A$4:$A$135", n_merges = 1)
+index_range <- get_vals("'G-8 Condition Look up'!$I$4:$I$135", n_merges = 1)
+condition_lookup <- cbind(match_range, index_range)
+colnames(condition_lookup) <- c("habitat_name", "condition_group")
+
+stopifnot(!any(apply(condition_lookup, 1, function(x) any(is.na(x)))))
+
+#get condition groups
+condition_groups <- get_vals("'G-8 Condition Look up'!$J$4:$N$4", n_merges = 1) %>%
+  unlist() %>%
+  unname()
+conditions <- get_vals("'G-8 Condition Look up'!$J$5:$N$9", n_merges = 1)
+colnames(conditions) <- condition_groups
+conditions_group_lookup <- tidyr::pivot_longer(conditions, cols = 1:ncol(conditions), names_to = "condition_group", values_to = "condition_name") %>%
+  dplyr::filter(!is.na(condition_name))
+
+#get all possible combinations of habitat_name & conditions
+habitat_conditions <- condition_lookup %>%
+  dplyr::left_join(conditions_group_lookup, by = "condition_group", relationship = "many-to-many")
+
+stopifnot(!any(duplicated(habitat_conditions)))
+
+habitat_conditions <- habitat_conditions %>%
+  dplyr::mutate(habitat_condition_id = 1:nrow(.))
+
+conditions <- data.frame(condition_name = unique(habitat_conditions$condition_name))
+conditions$condition_id <- 1:nrow(conditions)
+
+habitat_conditions <- habitat_conditions %>%
+  dplyr::left_join(conditions, by = "condition_name") %>%
+  dplyr::left_join(habitat_types, by = "habitat_name") %>%
+  dplyr::select(habitat_condition_id, habitat_type_id, condition_id)
+
+# #test
+# #check that habitat_conditions$habitat_name matches habitat_types$habitat_name
+# stopifnot(identical(sort(habitat_types$habitat_type_id), sort(unique(habitat_conditions$habitat_type_id))))
+# 
+# #check that all the valid combinations are in the lookup, by inserting all possible combinations of habitat_type and condition
+# baseline_habitat_labels <- habitat_labels %>%
+#   dplyr::filter(is_baseline) %>%
+#   dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
+#   dplyr::pull(habitat_label) %>%
+#   unique()
+# 
+# test_data <- expand.grid(habitat_label = baseline_habitat_labels, condition_id = conditions$condition_id) %>%
+#   dplyr::left_join(habitat_labels, by = "habitat_label") %>%
+#   dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
+#   dplyr::left_join(conditions, by = "condition_id") %>%
+#   dplyr::mutate(is_allowed = mapply(function(habitat_type_id, condition_id){
+#     matches <- sum(habitat_conditions$habitat_type_id == habitat_type_id & habitat_conditions$condition_id == condition_id)
+#     stopifnot(matches <= 1)
+#     matches == 1
+#   }, habitat_type_id, condition_id))
+# 
+# max_rows <- 248 #most rows possible to add to spreadsheet
+# 
+# path <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/The_Statutory_Biodiversity_Metric_Calculation_Tool_-_Macro_disabled_02.24.xlsx"
+# path_edit <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/metric_edit.xlsx"
+# 
+# lims <- seq(1, nrow(all_combinations), by = max_rows)
+# 
+# library(RDCOMClient)
+# 
+# for (i in 3:length(lims)){
+#   test_data_sub <- test_data[lims[i - 1]:(lims[i] - 1), ]
+#   workbook <- openxlsx::loadWorkbook(path)
+#   openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = test_data_sub[, "habitat_label"], startRow = 11, startCol = 6, colNames = F)
+#   openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = test_data_sub[, "condition_name"], startRow = 11, startCol = 11, colNames = F)
+#   openxlsx::saveWorkbook(workbook, path_edit, overwrite = T)
+#   
+#   #open the workbook
+#   excelApp <- RDCOMClient::COMCreate("Excel.Application")
+#   workbook <- excelApp$Workbooks()$Open(path_edit)
+#   
+#   # Force recalculation
+#   excelApp$CalculateFull()
+#   
+#   # Save the workbook
+#   workbook$Save()
+#   
+#   # Close the workbook and Excel application
+#   workbook$Close()
+#   excelApp$Quit()
+#   
+#   # Release resources
+#   rm(excelApp)
+#   gc()
+#   
+#   #get the result
+#   result <- readxl::read_xlsx(path_edit, "D-1 Off-Site Habitat Baseline", range = sprintf("F10:L%s", nrow(test_data_sub) + 10))
+#   
+#   #check the result
+#   #are the input habitat types identical?
+#   stopifnot(identical(result$`Habitat type`, test_data_sub$habitat_label))
+#   #are the input condition names identical?
+#   stopifnot(identical(result$`Condition`, test_data_sub$condition_name))
+#   #are the output condition types identical?
+#   stopifnot(identical(result$Score...7 != "Not Possible ▲", test_data_sub$is_allowed))
+# }
+# 
+
+
+```
+
+#### `strategic_significance`
+
+```{r}
+#range
+sheet_range <- "'G-3 Multipliers'!$L$4:$L$6"
+#This is a static range
+strategic_significances <- get_vals(sheet_range)
+colnames(strategic_significances) <- "strategic_significance_description"
+strategic_significances
+```
+
+### Outputs
+
+-   **Distinctiveness & Distinctiveness Score:** Depends on the selected Habitat Type. `distinctiveness_name` and `distinctiveness_score`.
+
+-   **Condition Score:** Depends on the selected Condition. Gives an error when the selected Condition is not possible for the selected Habitat Type. `condition_score`.
+
+-   **Strategic Significance & multiplier:** Depends on the strategic significance. `strategic_significance_name` and `strategic_significance_multiplier`.
+
+-   **Required Action to Meet Trading Rules:** Ignore for now.
+
+-   **Ecological Baseline Total Habitat Units:** Baseline value not taking into account the Spatial Risk Category. `baseline_units`.
+
+-   **Total Habitat Units (SRM)**: Total habitat units taking into account the Spatial Risk Category. Ignore for now
+
+-   **Area Retained & Area Enhanced**: These will be worked out based on `action_type`. If `action_type` is `0`, then `area_retained_ha` will be equal to `area_ha` and `area_enhanced_ha` will be 0. If `action_type` is `1`, then `area_retained_ha` will be 0 and `area_enhanced_ha` will be equal to `area_ha`. If `action_type` is `2`, then `area_retained_ha` and `area_enhanced_ha` will be 0.
+
+#### `habitat_type`
+
+```{r}
+#AV11
+formula_av11 <- '=IFERROR(INDEX(\'G-1 All Habitats\'!$B$3:$B$135,MATCH(F11,\'G-1 All Habitats\'!$A$3:$A$135,0)),"")'
+
+#F11 is habitat_label
+#use the lookup created earlier
+
+function_av11 <- function(habitat_label){
+  habitat_lookup$habitat_name[habitat_lookup$habitat_label == habitat_label]
+}
+
+#test
+# test_data <- habitat_labels %>%
+#   dplyr::filter(is_baseline) %>%
+#   dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
+#   dplyr::left_join(broad_habitats, by = "broad_habitat_id") %>%
+#   dplyr::select(broad_habitat_name, habitat_label, habitat_name)
+# 
+# workbook <- openxlsx::loadWorkbook(path)
+# openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = test_data[, 1:2], startRow = 11, startCol = 5, colNames = F)
+# openxlsx::saveWorkbook(workbook, path_edit, overwrite = T)
+# 
+# #open the workbook
+# excelApp <- RDCOMClient::COMCreate("Excel.Application")
+# workbook <- excelApp$Workbooks()$Open(path_edit)
+# 
+# # Force recalculation
+# excelApp$CalculateFull()
+# 
+# # Save the workbook
+# workbook$Save()
+# 
+# # Close the workbook and Excel application
+# workbook$Close()
+# excelApp$Quit()
+# 
+# # Release resources
+# rm(excelApp)
+# gc()
+# 
+# #get the result
+# result <- readxl::read_xlsx(path_edit, "D-1 Off-Site Habitat Baseline", range = "AV10:AV142")
+# 
+# stopifnot(identical(result$`Habitat type`, test_data$habitat_name))
+# file.remove(path_edit)
+```
+
+#### `distinctiveness_name` & `distinctiveness_score`
+
+```{r}
+#I Distinctiveness Name
+formula_ill <- '=IF(AV11="","",IF(AND(AW11="Yes",G11="No"),"Irreplaceable habitat ▲",IF(AND(AW11="No",G11="Yes"),"Cannot be Irreplaceable ▲",VLOOKUP(AV11,\'G-1 All Habitats\'!$B$2:$M$135,10,0))))'
+
+#AV11 is habitat_type
+#AW11 is the irreplaceable habitat lookup options
+
+range <- "'G-1 All Habitats'!$B$2:$M$135"
+distinctiveness_names <- get_vals(range) %>%
+  dplyr::slice(-1) %>% #get rid of header row
+  dplyr::select(1, 10)
+colnames(distinctiveness_names) <- c("habitat_name", "distinctiveness_name")
+distinctiveness_names <- distinctiveness_names %>%
+  dplyr::distinct()
+  
+#J Distinctiveness Score
+formula_jll <- '=IFERROR(VLOOKUP(I11,\'G-1 All Habitats\'!$V$3:$W$7,2,FALSE),"")'
+
+#I11 is distinctiveness_name
+
+#vlookup range
+range <- "'G-1 All Habitats'!$V$3:$W$7"
+distinctivenesses <- get_vals(range) %>%
+  dplyr::select(1, 2)
+colnames(distinctivenesses) <- c("distinctiveness_name", "distinctiveness_score")
+distinctivenesses <- distinctivenesses %>%
+  dplyr::mutate(distinctiveness_score = as.numeric(distinctiveness_score),
+                distinctiveness_id = 1:nrow(.)) %>%
+  dplyr::select(distinctiveness_id, distinctiveness_name, distinctiveness_score)
+
+
+#each habitat has 1 distinctiveness
+habitat_types <- habitat_types %>%
+  dplyr::left_join(distinctiveness_names, by = c("habitat_name" = "habitat_name")) %>%
+  dplyr::mutate(distinctiveness_name_lower = tolower(distinctiveness_name)) %>% #inconsistent capitalisation (VLOOKUP is case insensitive)
+  dplyr::left_join(distinctivenesses %>%
+                     dplyr::mutate(distinctiveness_name_lower = tolower(distinctiveness_name)),
+                   by = c("distinctiveness_name_lower" = "distinctiveness_name_lower"))
+
+habitat_types <- habitat_types %>%
+  dplyr::select(habitat_type_id, habitat_name, distinctiveness_id, broad_habitat_id)
+
+stopifnot(!any(duplicated(habitat_types)))
+stopifnot(!any(is.na(habitat_types$distinctiveness_id)))
+
+#test
+#input data
+test_data <- habitat_labels %>%
+  dplyr::filter(is_baseline) %>%
+  dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
+  dplyr::left_join(distinctivenesses, by = c("distinctiveness_id" = "distinctiveness_id"))
+
+#save the data into the excel file
+workbook <- openxlsx::loadWorkbook(path)
+openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = test_data[, "habitat_label"], startRow = 11, startCol = 6, colNames = F)
+openxlsx::saveWorkbook(workbook, path_edit, overwrite = T)
+
+#open the workbook using RDCOMClient
+excelApp <- RDCOMClient::COMCreate("Excel.Application")
+workbook <- excelApp$Workbooks()$Open(path_edit)
+
+# Force recalculation
+excelApp$CalculateFull()
+
+# Save the workbook
+workbook$Save()
+
+# Close the workbook and Excel application
+workbook$Close()
+excelApp$Quit()
+
+# Release resources
+rm(excelApp)
+gc()
+
+#get the result
+result <- readxl::read_xlsx(path_edit, "D-1 Off-Site Habitat Baseline", range = sprintf("I10:%s", nrow(test_data_sub) + 10))
+
+#check the result
+stopifnot(identical(tolower(result$`Distinctiveness`), tolower(test_data$distinctiveness_name)))
+stopifnot(identical(result$`Score`, test_data$distinctiveness_score))
+
+#delete the file
+file.remove(path_edit)
+```
+
+#### `condition_score`
+
+```{r}
+#L Condition Score
+formula <- '=IFERROR(INDEX(\'G-8 Condition Look up\'!$A$3:$H$135,MATCH(AV11,\'G-8 Condition Look up\'!$A$3:$A$135,0),MATCH(K11,\'G-8 Condition Look up\'!$A$3:$H$3,0)),"")'
+
+#AV11 is habitat_type
+#K11 is condition
+
+#lookup range
+range <- "'G-8 Condition Look up'!$A$3:$H$135"
+condition_scores <- get_vals(range) #same range used before
+
+#need the scores to be added to data
+condition_scores <- get_vals("G-1 All Habitats'!Z2:AA9")
+colnames(condition_scores) <- c("condition_name", "condition_score")
+conditions <- conditions %>%
+  dplyr::left_join(condition_scores, by = "condition_name") %>%
+  dplyr::mutate(condition_score = as.numeric(condition_score))
+
+
+#test
+#input data
+test_data <- habitat_labels %>%
+  dplyr::filter(is_baseline) %>%
+  dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
+  dplyr::full_join(habitat_conditions, "habitat_type_id") %>%
+  dplyr::left_join(conditions, by = "condition_id")
+
+lims <- seq(1, nrow(test_data), by = 248)
+
+for (i in 2:length(lims)) {
+  test_data_sub <- test_data[lims[i - 1]:(lims[i] - 1), ]
+
+  #save the data into the excel file
+  workbook <- openxlsx::loadWorkbook(path)
+  openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = test_data_sub[, "habitat_label"], startRow = 11, startCol = 6, colNames = F)
+  openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = test_data_sub[, "condition_name"], startRow = 11, startCol = 11, colNames = F)
+  openxlsx::saveWorkbook(workbook, path_edit, overwrite = T)
+  
+  #open the workbook using RDCOMClient
+  excelApp <- RDCOMClient::COMCreate("Excel.Application")
+  workbook <- excelApp$Workbooks()$Open(path_edit)
+  
+  # Force recalculation
+  excelApp$CalculateFull()
+  
+  # Save the workbook
+  workbook$Save()
+  
+  # Close the workbook and Excel application
+  workbook$Close()
+  excelApp$Quit()
+  
+  # Release resources
+  rm(excelApp)
+  gc()
+  
+  #get the result
+  result <- readxl::read_xlsx(path_edit, "D-1 Off-Site Habitat Baseline", range = "K10:L258")
+  
+  #check the result
+  stopifnot(identical(tolower(result$Condition), tolower(test_data_sub$condition_name)))
+  stopifnot(identical(result$`Score`, test_data_sub$condition_score))
+}
+```
+#### `strategic_significance_name` & `strategic_significance_multiplier`
+
+```{r}
+#O11 Strategic Significance Multiplier
+formula <- '=IF(M11="","",IF(VLOOKUP(M11,\'G-3 Multipliers\'!$L$3:$N$6,3,FALSE)=0,"Spatial Data Missing ⚠",VLOOKUP(M11,\'G-3 Multipliers\'!$L$3:$N$6,3,FALSE)))'
+
+#M11 is strategic_significance_description
+vlookup_range <- "'G-3 Multipliers'!$L$3:$N$6"
+strategic_significances <- get_vals(vlookup_range, n_merges = 0) %>% #same options as before
+  dplyr::slice(-1) #get rid of header
+
+colnames(strategic_significances) <- c("strategic_significance_description", "strategic_significance_name", "strategic_significance_multiplier")
+strategic_significances <- strategic_significances %>%
+  dplyr::mutate(strategic_significance_multiplier = as.numeric(strategic_significance_multiplier)) %>%
+  dplyr::mutate(strategic_significance_id = 1:nrow(.))
+```
+
+#### `baseline_units_retained`
+
+```{r}
+#X11 Baseline Units Retained
+formula <- '=IFERROR(IF(G11="Yes","Irreplaceable habitat - no units generated ⚠",(V11*J11*L11*O11)),"")'
+#G11 is irreplaceable_habitat (ignored)
+#V11 is area_retained_ha (set the same as baseline_area_ha)
+#J11 is distinctiveness_score (dependsd on habitat_type)
+#L11 is condition_score (depends on condition_habitat_type)
+#O11 is strategic_significance_multiplier
+
+#test
+#generate random data
+baseline_habitat_parcels <- data.frame(
+  habitat_label_id = sample(habitat_labels %>%
+                              dplyr::filter(is_baseline) %>%
+                              dplyr::pull(habitat_label_id), max_rows, replace = T),
+  area_retained_ha = runif(max_rows, 0, 100),
+  strategic_significance_id = sample(strategic_significances$strategic_significance_id, max_rows, replace = T)
+)
+
+baseline_habitat_parcels <- baseline_habitat_parcels %>%
+  dplyr::left_join(habitat_labels, by = "habitat_label_id") %>%
+  dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
+  dplyr::left_join(distinctivenesses, by = "distinctiveness_id") %>%
+  dplyr::mutate(condition_id = sapply(habitat_type_id, function(x) {
+    matches <- habitat_conditions$condition_id[habitat_conditions$habitat_type_id == x]
+    #sample annoyingly uses 1:x when x is a single value
+    if (length(matches) == 1) return(matches)
+    return(sample(matches, 1))
+  }) %>% unname()) %>%
+  dplyr::left_join(conditions, by = "condition_id") %>%
+  dplyr::left_join(strategic_significances, by = "strategic_significance_id") %>%
+  dplyr::mutate(baseline_units_retained = area_retained_ha * distinctiveness_score * condition_score * strategic_significance_multiplier)
+
+#check with spreadsheet
+workbook <- openxlsx::loadWorkbook(path)
+openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = baseline_habitat_parcels[, "habitat_label"], startRow = 11, startCol = 6, colNames = F)
+openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = baseline_habitat_parcels[, "area_retained_ha"], startRow = 11, startCol = 8, colNames = F)
+openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = baseline_habitat_parcels[, "condition_name"], startRow = 11, startCol = 11, colNames = F)
+openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = baseline_habitat_parcels[, "strategic_significance_description"], startRow = 11, startCol = 13, colNames = F)
+openxlsx::writeData(workbook, sheet = "D-1 Off-Site Habitat Baseline", x = baseline_habitat_parcels[, "area_retained_ha"], startRow = 11, startCol = 22, colNames = F)
+openxlsx::saveWorkbook(workbook, path_edit, overwrite = T)
+
+#open the workbook using RDCOMClient
+excelApp <- RDCOMClient::COMCreate("Excel.Application")
+workbook <- excelApp$Workbooks()$Open(path_edit)
+
+# Force recalculation
+excelApp$CalculateFull()
+
+# Save the workbook
+workbook$Save()
+
+# Close the workbook and Excel application
+workbook$Close()
+excelApp$Quit()
+
+# Release resources
+rm(excelApp)
+gc()
+
+#get the result
+result <- readxl::read_xlsx(path_edit, "D-1 Off-Site Habitat Baseline", range = "X10:X258")
+
+#check the result
+stopifnot(identical(round(result$`Baseline units retained`, 2),
+                    round(baseline_habitat_parcels$baseline_units_retained, 2)))
+```
+
+#### `baseline_units`
+
+```{r}
+formula <- '
+=IFERROR(
+  IF(
+    AND(F11<>"", G11=""), 
+    "Confirm irreplaceable habitat status ▲",
+    (IF(
+      AND(R11<>"",AF11=""), 
+      "Off-site reference required ▲",
+      (IF(
+        AND(E11="Individual trees", W11>0, G11="Yes"), 
+        "Error - you cannot enhance irreplaceable individual trees ▲",              
+        (IF(
+          AND(X11="Irreplaceable habitat - no units generated ⚠",
+              (W11+V11)<H11, 
+              OR(AB11="No", AB11="")),
+          "Any Loss Unacceptable ⚠",
+          (IF(
+            X11="Irreplaceable habitat - no units generated ⚠", 
+            W11*J11*L11*O11, 
+            IF(
+              AND(P11=\'G-1 All Habitats\'!$X$9,
+                  AH11>0,
+                  V11<=0, 
+                  W11<=0, 
+                  OR(AB11="No", AB11="")),
+              "Any Loss Unacceptable ⚠",  
+              IF(
+                AND(P11=\'G-1 All Habitats\'!$X$9,AH11>0,V11<=0, W11<=0), 
+                0, 
+                (IF(
+                  AND(P11=\'G-1 All Habitats\'!$X$9,(W11+V11)<H11, 
+                  OR(AB11="No", AB11="")),
+                  "Any Loss Unacceptable ⚠", 
+                  (IF(
+                    P11="",
+                    "",
+                    IF(
+                      AND(P11=\'G-1 All Habitats\'!$X$9,W11>0),
+                      X11+Y11,
+                      IF(
+                        AND(P11=\'G-1 All Habitats\'!$X$9,V11>0),
+                        X11+Y11, 
+                        IF(R11="","",H11*J11*L11*O11)
+                      )
+                    )
+                  )
+                ))
+              ))
+            )
+          ))
+        ))
+      ))
+    ))
+  ),
+  "Check Data ▲"
+)'
+
+#this is a complex formula that depends on a number of other fields
+#F11 is habitat_type
+#G11 is irreplaceable_habitat (ignored)
+#AF11 is Off-site reference (ignored)
+#E11 is broad_habitat
+#W11 is Area Enhanced. We'll assume this equal to area_ha if action_type is 2. Otherwise 0.
+#X11 is Baseline Units Retained.
+#V11 is Area Retained. We'll assume this equal to area_ha if action_type is 1. Otherwise 0.
+#H11 is ????
+calculate_baseline_units <- function(habitat_type, action_type){
+  tryCatch({
+
+        
+  }, error = function(e) e$message)
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Headline Results
+
+The following figures of BNG units are included in headline results:
+
+| Label                                                                                                 | Formula                                                      | R   |
+|----------------------------------|-------------------|-------------------|
+| Off-site baseline                                                                                     | =IFERROR('A-1 On Site-Habitat Baseline'!Q259,"Check Data ⚠") |     |
+| Off-site post-intervention (Including habitat retention, creation & enhancement)                      |                                                              |     |
+| Off-site net change (units & percentage)                                                              |                                                              |     |
+| Combined net unit change (Including all on-site & off-site habitat retention, creation & enhancement) |                                                              |     |
+| Spatial risk multiplier (SRM) deductions                                                              |                                                              |     |
