@@ -1,6 +1,6 @@
 Package: defraBiodiversityMetric
 Title: Tools for working with the English Statutory Biodiversity Metric
-Version: 0.1.0.0001
+Version: 0.1.0.0002
 Authors@R: 
     person("Euan", "Mckenzie", , "euan.mckenzie@kentwildlife.org.uk", role = c("aut", "cre"))
 Description: Extract units from DEFRA's statutory biodiversity metric spreadsheet and visualise habitat transitions using Sankey Diagrams.
