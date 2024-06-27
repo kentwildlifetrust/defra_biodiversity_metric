@@ -1,0 +1,495 @@
+{
+  "habitats": {
+    "tableName": ["habitats"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "name",
+        "type": "character",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "distinctiveness_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "creation_difficulty_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "enhancement_difficulty_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": ["kwtid"],
+    "foreignKeys": [
+      {
+        "refTable": ["distinctivenesses"],
+        "key": [
+          {
+            "from": "distinctiveness_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      }
+    ],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [54],
+      "y": [134],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  },
+  "distinctivenesses": {
+    "tableName": ["distinctivenesses"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "name",
+        "type": "character",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "score",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": ["kwtid"],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [386],
+      "y": [142],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  },
+  "conditions": {
+    "tableName": ["conditions"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "name",
+        "type": "character",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "score",
+        "type": "numeric",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": ["kwtid"],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [-332],
+      "y": [197],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  },
+  "difficulties": {
+    "tableName": ["difficulties"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "name",
+        "type": "character",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "multiplier",
+        "type": "numeric",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": ["kwtid"],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [198],
+      "y": [-153],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  },
+  "years": {
+    "tableName": ["years"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "name",
+        "type": "character",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "multiplier",
+        "type": "numeric",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": ["kwtid"],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [-627],
+      "y": [184],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  },
+  "parcels": {
+    "tableName": ["parcels"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "area_ha",
+        "type": "numeric",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "base_strategic_significance_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "post_strategic_significance_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "transition_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": ["kwtid"],
+    "foreignKeys": [
+      {
+        "refTable": ["transitions"],
+        "key": [
+          {
+            "from": "transition_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      },
+      {
+        "refTable": ["strategic_significances"],
+        "key": [
+          {
+            "from": "base_strategic_significance_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      },
+      {
+        "refTable": ["strategic_significances"],
+        "key": [
+          {
+            "from": "post_strategic_significance_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      }
+    ],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [-350],
+      "y": [-538],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  },
+  "strategic_significances": {
+    "tableName": ["strategic_significances"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "name",
+        "type": "character",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "description",
+        "type": "character",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "multiplier",
+        "type": "numeric",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": ["kwtid"],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [79],
+      "y": [-538],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  },
+  "transitions": {
+    "tableName": ["transitions"],
+    "fields": [
+      {
+        "name": "kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": true,
+        "comment": ""
+      },
+      {
+        "name": "base_habitat_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "base_condition_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "post_habitat_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "post_condition_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "transition_type",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": "0 - retention, 1 - creation, 2 - enhancement"
+      },
+      {
+        "name": "year_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      },
+      {
+        "name": "difficulty_kwtid",
+        "type": "integer",
+        "nullable": false,
+        "unique": false,
+        "comment": ""
+      }
+    ],
+    "primaryKey": [],
+    "foreignKeys": [
+      {
+        "refTable": ["habitats"],
+        "key": [
+          {
+            "from": "base_habitat_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      },
+      {
+        "refTable": ["habitats"],
+        "key": [
+          {
+            "from": "post_habitat_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      },
+      {
+        "refTable": ["conditions"],
+        "key": [
+          {
+            "from": "base_condition_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      },
+      {
+        "refTable": ["conditions"],
+        "key": [
+          {
+            "from": "post_condition_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      },
+      {
+        "refTable": ["years"],
+        "key": [
+          {
+            "from": "year_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      },
+      {
+        "refTable": ["difficulties"],
+        "key": [
+          {
+            "from": "difficulty_kwtid",
+            "to": "kwtid"
+          }
+        ],
+        "cardinality": [0, -1, 1, 1]
+      }
+    ],
+    "indexes": [
+      {
+        "fields": ["kwtid"],
+        "unique": [true]
+      }
+    ],
+    "display": {
+      "x": [-266],
+      "y": [-279],
+      "color": ["NA"],
+      "comment": ["NA"]
+    }
+  }
+}
