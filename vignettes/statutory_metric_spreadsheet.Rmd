@@ -2104,6 +2104,49 @@ formula_ay12 <- '
 #### `distinctiveness_change`
 
 ```{r}
+#Baseline habs P11
+formula_p11 <- '
+=(IF(
+  G11="Yes",
+  "Bespoke compensation likely to be required",
+  (IFERROR(
+    VLOOKUP(AV11,\'G-1_All_Habitats\'!$B$2:$M$135,12,0),
+    ""
+  ))
+))
+'
+#G11 is irreplaceable habitat
+#assume that this is 'No'
+#AV11 is habitat_name
+#column 12 of the lookup range is the trading rules
+trading_rules <- get_vals("'G-1 All Habitats'!$B$2:$M$135")
+colnames(trading_rules) <- trading_rules[1,]
+trading_rules <- trading_rules %>%
+  dplyr::slice(-1) %>%
+  dplyr::select(habitat_name = 1,
+                trading_rules = 12) %>%
+  dplyr::left_join(
+    habitat_types %>%
+      dplyr::select(habitat_name, habitat_type_id),
+    by = "habitat_name"
+  ) %>%
+  dplyr::select(habitat_type_id, trading_rules)
+
+#O12 required action to meet trading rules
+formula_o12 <- '
+=IF(
+  E12="",
+  "",
+  IF(
+    ISNA(VLOOKUP($E12,\'D-1_Off-Site_Habitat_Baseline\'!$D$1:$AA$258,13,0)),
+    "",
+    (VLOOKUP($E12,\'D-1_Off-Site_Habitat_Baseline\'!$D$1:$AA$258,13,0))
+  )
+)
+'
+#E12 is baseline_ref
+#col 13 of the vlookup range is the trading_rules
+
 formula_t12 <- '
 =IF(
   E12="",
@@ -2141,12 +2184,55 @@ formula_t12 <- '
 '
 #E12 is baseline_ref
 #F12 is baseline_habitat_type
-#O12 is required action to meet trading rules - assume this always gives a satisfactory result
-#X12 is distinctiveness_score
-#I12 is baseline_distinctiveness_score
-#R12 is enhanced_habitat_label
+#O12 is required action to meet trading rules
+#X12 is post_distinctiveness_score
+#I12 is base_distinctiveness_score
+#R12 is post_habitat_label
 #H12 is baseline_distinctiveness_name
 #W12 is enhancement_distinctiveness_name
+
+#AND(LEFT(O12,6)="Bespok",F12<>S12) -> this one only applies for irreplaceable habs
+
+#AND(R12="Artificial hard structures with integrated greening of grey infrastructure (IGGI)",F12<>"Intertidal hard structures - Artificial hard structures with integrated greening of grey infrastructure (IGGI)", F12<>"Intertidal hard structures - Artificial hard structures", F12<>"Intertidal hard structures - Artificial features of hard structures")
+
+dplyr::filter(habitat_labels, habitat_label == "Littoral seagrass")$habitat_type_id
+dplyr::filter(habitat_types, tolower(habitat_name) == tolower("Intertidal sediment - Littoral seagrass"))$habitat_type_id
+dplyr::filter(habitat_types, tolower(habitat_name) == tolower("Intertidal sediment - Littoral sand"))$habitat_type_id
+dplyr::filter(habitat_labels, habitat_label == "Artificial hard structures with integrated greening of grey infrastructure (IGGI)")$habitat_type_id
+dplyr::filter(habitat_types, tolower(habitat_name) == tolower("Intertidal hard structures - Artificial hard structures with integrated greening of grey infrastructure (IGGI)"))$habitat_type_id
+dplyr::filter(habitat_types, tolower(habitat_name) == tolower("Intertidal hard structures - Artificial hard structures"))$habitat_type_id
+dplyr::filter(habitat_types, tolower(habitat_name) == tolower("Intertidal hard structures - Artificial features of hard structures"))$habitat_type_id
+
+is_trading_rule_met <- function(trading_rule, 
+                                base_broad_habitat_id, post_broad_habitat_id,
+                                base_habitat_type_id, post_habitat_type_id, 
+                                base_distinctiveness_score, post_distinctiveness_score) {
+  if (trading_rule == "Same distinctiveness or better habitat required ≥" &
+      base_distinctiveness_score > post_distinctiveness_score) {
+    return(F)
+  }
+  if (trading_rule == "Same broad habitat or a higher distinctiveness habitat required (≥)" &
+      base_broad_habitat_id != post_broad_habitat_id &
+      base_distinctiveness_score > post_distinctiveness_score) {
+    return(F)
+  }
+  if ((trading_rule %in% c("Same habitat required", "Same habitat required – bespoke compensation option ⚠")) &
+      base_habitat_type_id != post_habitat_type_id) {
+    return(F)
+  }
+  if (post_distinctiveness_score < base_distinctiveness_score) {
+    return(F)
+  }
+  if (post_habitat_type_id == 114 & base_habitat_type_id != 114 & base_habitat_type_id != 126) {
+    return(F)
+  }
+  if (post_habitat_type_id == 130 & base_habitat_type_id != 130 & base_habitat_type_id != 128 & base_habitat_type_id != 129) {
+    return(F)
+  }
+  return(T)
+}
+    
+    
 
 #we are going to ignore the limitations on Littoral seagrass and Artificial hard structures
 #Based on assumptions, this always returns the distinctiveness change
@@ -2240,16 +2326,43 @@ temporal_habitats <- get_vals(range, n_merges = 1)
 range <- "'G-5 Enhancement Temporal'!$A$4:$W$4" #adjusted this range because of dropped first two columns
 temporal_conditions <- get_vals(range, n_merges = 1) 
 
-#start with all possible combinations of post_habitat_type, post_condition, base_distinctiveness, base_condition
+#start with all possible combinations of post_habitat_type, post_condition, base_habitat_type, base_condition
 enhancement <- expand.grid(
   post_habitat_type_id = habitat_types$habitat_type_id,
   post_condition_id = conditions$condition_id,
-  base_distinctiveness_id = distinctivenesses$distinctiveness_id,
+  base_habitat_type_id = distinctivenesses$distinctiveness_id,
   base_condition_id = conditions$condition_id
 )
 
 #either one of the conditions or distinctiveness must increase. Neither can decrease
+#trading rules must also be met
 enhancement <- enhancement %>%
+  dplyr::left_join(
+    habitat_types %>%
+      dplyr::select(post_habitat_type_id = habitat_type_id,
+                    post_broad_habitat_id = broad_habitat_id,
+                    post_distinctiveness_id = distinctiveness_id),
+    by = c("post_habitat_type_id" = "post_habitat_type_id")
+  ) %>%
+  dplyr::left_join(
+    distinctivenesses %>%
+      dplyr::select(post_distinctiveness_id = distinctiveness_id,
+                    post_distinctiveness_score = distinctiveness_score),
+    by = c("post_distinctiveness_id" = "post_distinctiveness_id")
+  ) %>%
+    dplyr::left_join(
+    conditions %>%
+      dplyr::select(post_condition_id = condition_id,
+                    post_condition_score = condition_score),
+    by = c("post_condition_id" = "post_condition_id")
+  ) %>%
+  dplyr::left_join(
+    habitat_types %>%
+      dplyr::select(base_habitat_type_id = habitat_type_id,
+                    base_broad_habitat_id = broad_habitat_id,
+                    base_distinctiveness_id = distinctiveness_id),
+    by = c("base_habitat_type_id" = "base_habitat_type_id")
+  ) %>%
   dplyr::left_join(
     distinctivenesses %>%
       dplyr::select(base_distinctiveness_id = distinctiveness_id,
@@ -2262,46 +2375,38 @@ enhancement <- enhancement %>%
                     base_condition_score = condition_score),
     by = c("base_condition_id" = "base_condition_id")
   ) %>%
-  dplyr::left_join(
-    conditions %>%
-      dplyr::select(post_condition_id = condition_id,
-                    post_condition_score = condition_score),
-    by = c("post_condition_id" = "post_condition_id")
-  ) %>%
-  dplyr::left_join(
-    habitat_types %>%
-      dplyr::select(post_habitat_type_id = habitat_type_id,
-                    post_distinctiveness_id = distinctiveness_id),
-    by = c("post_habitat_type_id" = "post_habitat_type_id")
-  ) %>%
-  dplyr::left_join(
-    distinctivenesses %>%
-      dplyr::select(post_distinctiveness_id = distinctiveness_id,
-                    post_distinctiveness_score = distinctiveness_score),
-    by = c("post_distinctiveness_id" = "post_distinctiveness_id")
-  ) %>%
-  dplyr::filter(base_distinctiveness_score <= post_distinctiveness_score & base_condition_score <= post_condition_score) %>%
-  dplyr::filter(base_distinctiveness_score < post_distinctiveness_score | base_condition_score < post_condition_score)
+    dplyr::left_join(trading_rules, by = c("base_habitat_type_id" = "habitat_type_id"))
+
+  #filter based on trading rules
+  enhancement <- enhancement %>%
+    dplyr::filter(mapply(FUN = is_trading_rule_met,
+                         trading_rules,
+                         base_broad_habitat_id, post_broad_habitat_id,
+                         base_habitat_type_id, post_habitat_type_id,
+                         base_distinctiveness_score, post_distinctiveness_score) %>%
+                    unname())
+  
+  #filter based on required condition changes
+  enhancement <- enhancement %>%
+    dplyr::filter(base_distinctiveness_score <= post_distinctiveness_score & base_condition_score <= post_condition_score) %>%
+    dplyr::filter(base_distinctiveness_score < post_distinctiveness_score | base_condition_score < post_condition_score)
 
 
-#filter down the distinctiveness and condition combinations to allowed combinations
-distinctiveness_conditions <- habitat_conditions %>%
-  dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
-  dplyr::group_by(condition_id, distinctiveness_id) %>%
-  dplyr::summarise() %>%
+#filter down the baseline & post habitat and condition combinations
+allowed_habitat_conditions <- habitat_conditions %>%
   dplyr::mutate(is_allowed = T)
 
 enhancement <- enhancement %>%
-  dplyr::left_join(distinctiveness_conditions,
+  dplyr::left_join(allowed_habitat_conditions,
                    by = c("base_condition_id" = "condition_id",
-                          "base_distinctiveness_id" = "distinctiveness_id")) %>%
+                          "base_habitat_type_id" = "habitat_type_id")) %>%
   dplyr::filter(is_allowed) %>%
   dplyr::select(-is_allowed)
 
 enhancement <- enhancement %>%
-  dplyr::left_join(distinctiveness_conditions,
+  dplyr::left_join(allowed_habitat_conditions,
                    by = c("post_condition_id" = "condition_id",
-                          "post_distinctiveness_id" = "distinctiveness_id")) %>%
+                          "post_habitat_type_id" = "habitat_type_id")) %>%
   dplyr::filter(is_allowed) %>%
   dplyr::select(-is_allowed)
   
@@ -2404,7 +2509,7 @@ enhancement_same_distinctiveness <- enhancement_same_distinctiveness %>%
   dplyr::select(-is_allowed)
 
 enhancement <- dplyr::bind_rows(enhancement_lower_distinctiveness, enhancement_same_distinctiveness) %>%
-  dplyr::select(base_distinctiveness_id, base_condition_id, post_habitat_type_id, post_condition_id, years_to_target_id)
+  dplyr::select(base_habitat_type_id, base_condition_id, post_habitat_type_id, post_condition_id, years_to_target_id)
 
 # #check for NA values
 stopifnot(!any(is.na(enhancement)))
@@ -2421,6 +2526,7 @@ stopifnot(
     nrow()) == nrow(enhancement)
 )
 
+enhancement$enhancement_id <- 1:nrow(enhancement)
 ```
 
 #### `final_time_to_target_condition`
@@ -2632,7 +2738,7 @@ formula_am12 <- '=IFERROR(IF(F12="","",IF(AH12="Check Data ⚠","Check Data ⚠"
 #same lookup as before
 
 #check uniqueness in enhancement
-stopifnot(!any(duplicated(dplyr::select(enhancement, post_habitat_type_id, post_condition_id, base_distinctiveness_id, base_condition_id))))
+stopifnot(!any(duplicated(dplyr::select(enhancement, post_habitat_type_id, post_condition_id, base_habitat_type_id, base_condition_id))))
 
 # enhancement %>%
 #   dplyr::select(post_habitat_type_id, post_condition_id, base_distinctiveness_id, base_condition_id) %>%
@@ -2690,86 +2796,54 @@ formula_aq12 = '
 #generate random data
 max_rows <- 246
 #baseline data
-habitat_parcels <- data.frame(
-  habitat_label_id = sample(habitat_labels %>%
-                              dplyr::filter(is_baseline) %>%
-                              dplyr::pull(habitat_label_id), max_rows, replace = T),
-  enhanced_area_ha = runif(max_rows, 0, 100),
-  offsite_reference = 1
-)
-
-habitat_parcels <- habitat_parcels %>%
-  dplyr::left_join(habitat_labels, by = "habitat_label_id") %>%
-  dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
-  dplyr::left_join(distinctivenesses, by = "distinctiveness_id") %>%
-  dplyr::mutate(condition_id = sapply(habitat_type_id, function(x) {
-    matches <- habitat_conditions$condition_id[habitat_conditions$habitat_type_id == x]
-    #sample annoyingly uses 1:x when x is a single value
-    if (length(matches) == 1) return(matches)
-    return(sample(matches, 1))
-  }) %>% unname()) %>%
-  dplyr::left_join(conditions, by = "condition_id") %>%
-  dplyr::select(offsite_reference,
-                base_habitat_type_id = habitat_type_id,
-                base_habitat_label = habitat_label,
-                enhanced_area_ha,
-                base_distinctiveness_id = distinctiveness_id,
-                base_distinctiveness_score = distinctiveness_score,
-                base_condition_id = condition_id,
-                base_condition_name = condition_name,
-                base_condition_score = condition_score) %>%
-  dplyr::mutate(
-    strategic_significance_id = sample(strategic_significances$strategic_significance_id, max_rows, replace = T),
-        
-    post_habitat_type_id = mapply(FUN = function(d, c) {
-      matches <- enhancement %>%
-        dplyr::filter(base_distinctiveness_id == d &
-                      base_condition_id == c)
-      if (nrow(matches) == 1) return(matches$post_habitat_type_id)
-      if (nrow(matches) == 0) return(NA)
-      return(sample(matches$post_habitat_type_id, 1))
-    }, base_distinctiveness_id, base_condition_id),
-    
-  ) %>%
-    dplyr::mutate(
-    post_condition_id = mapply(FUN = function(h, d, c) {
-      matches <- enhancement %>%
-        dplyr::filter(base_distinctiveness_id == d &
-                      base_condition_id == c &
-                      post_habitat_type_id == h)
-      if (nrow(matches) == 1) return(matches$post_condition_id)
-      if (nrow(matches) == 0) return(NA)
-      return(sample(matches$post_condition_id, 1))
-    }, post_habitat_type_id, base_distinctiveness_id, base_condition_id)
-  ) %>%
+habitat_parcels <- enhancement %>%
+  dplyr::slice(sample(1:nrow(.), max_rows, replace = F)) %>%
+  dplyr::left_join(habitat_labels %>%
+                     dplyr::filter(is_enhanced_to) %>%
+                     dplyr::select(base_habitat_label = habitat_label, 
+                                   base_habitat_type_id = habitat_type_id),
+                   by = "base_habitat_type_id") %>%
+  dplyr::left_join(habitat_labels %>%
+                     dplyr::filter(is_enhanced_to) %>%
+                     dplyr::select(post_habitat_label = habitat_label, 
+                                   post_habitat_type_id = habitat_type_id),
+                   by = "post_habitat_type_id") %>%
+  dplyr::left_join(habitat_types %>%
+                     dplyr::select(base_habitat_type_id = habitat_type_id, 
+                                   base_distinctiveness_id = distinctiveness_id),
+                   by = "base_habitat_type_id") %>%
+  dplyr::left_join(habitat_types %>%
+                     dplyr::select(post_habitat_type_id = habitat_type_id, 
+                                   post_distinctiveness_id = distinctiveness_id),
+                   by = "post_habitat_type_id") %>%
   
-  dplyr::left_join(enhancement,
-                   by = c("post_habitat_type_id" = "post_habitat_type_id",
-                          "base_distinctiveness_id" = "base_distinctiveness_id",
-                          "base_condition_id" = "base_condition_id",
-                          "post_condition_id" = "post_condition_id")) %>%
   dplyr::left_join(conditions %>%
                      dplyr::select(post_condition_id = condition_id,
                                    post_condition_name = condition_name,
                                    post_condition_score = condition_score),
                    by = "post_condition_id") %>%
-  dplyr::left_join(strategic_significances, by = "strategic_significance_id") %>%
-  dplyr::left_join(difficulties, by = "difficulty_id") %>%
-  dplyr::left_join(years_to_target, by = "years_to_target_id") %>%
-  dplyr::left_join(habitat_types %>%
-                     dplyr::select(post_habitat_type_id = habitat_type_id,
-                                   post_distinctiveness_id = distinctiveness_id),
-                   by = "post_habitat_type_id") %>%
-  dplyr::left_join(distinctivenesses %>%
+    dplyr::left_join(conditions %>%
+                     dplyr::select(base_condition_id = condition_id,
+                                   base_condition_name = condition_name,
+                                   base_condition_score = condition_score),
+                   by = "base_condition_id") %>%
+    dplyr::left_join(distinctivenesses %>%
                      dplyr::select(post_distinctiveness_id = distinctiveness_id,
                                    post_distinctiveness_score = distinctiveness_score),
                    by = "post_distinctiveness_id") %>%
-  dplyr::left_join(habitat_labels %>%
-                     dplyr::filter(is_enhanced_to) %>%
-                     dplyr::left_join(habitat_types, by = "habitat_type_id") %>%
-                     dplyr::select(post_habitat_type_id = habitat_type_id,
-                                   post_habitat_label = habitat_label),
-                   by = "post_habitat_type_id") %>%
+    dplyr::left_join(distinctivenesses %>%
+                     dplyr::select(base_distinctiveness_id = distinctiveness_id,
+                                   base_distinctiveness_score = distinctiveness_score),
+                   by = "base_distinctiveness_id") %>%
+  
+  dplyr::left_join(difficulties, by = "difficulty_id") %>%
+  dplyr::left_join(years_to_target, by = "years_to_target_id") %>%
+  
+  dplyr::mutate(enhanced_area_ha = 1,
+                offsite_reference = 1,
+                strategic_significance_id = sample(strategic_significances$strategic_significance_id, 1)) %>%
+  dplyr::left_join(strategic_significances, by = "strategic_significance_id") %>%
+
   dplyr::mutate(
     habitat_units_delivered = strategic_significance_multiplier * enhanced_area_ha * (base_distinctiveness_score * base_condition_score + (difficulty_multiplier * years_to_target_multiplier * (post_distinctiveness_score * post_condition_score - base_distinctiveness_score * base_condition_score)))
     
@@ -2816,7 +2890,7 @@ gc()
 result <- readxl::read_xlsx(path_edit, "D-3 Off-Site Habitat Enhancment", range = "AQ11:AQ257")
 habitat_parcels$result <- result$...1
 #check the result
-stopifnot(identical(round(result$`Baseline units retained`, 2),
-                    round(baseline_habitat_parcels$baseline_units_retained, 2)))
+stopifnot(identical(round(result$...1, 2),
+                    round(habitat_parcels$habitat_units_delivered, 2)))
 
 ```
