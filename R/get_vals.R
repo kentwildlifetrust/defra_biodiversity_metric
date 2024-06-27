@@ -1,3 +1,12 @@
+#' Get values from spreadsheet using sheet range
+#'
+#' @param sheet_range the range of the sheet to get values from. Must include a sheet name and a range.
+#' @param n_merges the number of merged cells above a the sheet_range.
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_vals <- function(sheet_range, n_merges = 0){
   #get the sheet
   sheet_name <- strsplit(sheet_range, "!")[[1]][1] %>%

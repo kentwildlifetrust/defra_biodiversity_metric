@@ -15,3 +15,9 @@ names(metric_sheets) <- sheets
 
 #save data to a file in the repo
 usethis::use_data(metric_sheets, overwrite = TRUE)
+
+#read the model
+model <- ReDaMoR::read_json_data_model("dev/bng_db_model.json")
+model <- ReDaMoR::model_relational_data(model)
+file.remove("dev/bng_db_model.json")
+ReDaMoR::write_json_data_model(model, "dev/bng_db_model.json")
