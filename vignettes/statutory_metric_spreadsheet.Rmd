@@ -2894,3 +2894,64 @@ stopifnot(identical(round(result$...1, 2),
                     round(habitat_parcels$habitat_units_delivered, 2)))
 
 ```
+```{r}
+#save all the lookup tables
+habitat_types <- dplyr::select(habitat_types, habitat_type_id, broad_habitat_id, distinctiveness_id, habitat_name) %>%
+  as.data.frame()
+usethis::use_data(habitat_types, overwrite = T)
+
+habitat_labels <- dplyr::select(habitat_labels, habitat_label_id, habitat_type_id, is_baseline, is_created, is_enhanced_to, habitat_label) %>%
+  as.data.frame()
+usethis::use_data(habitat_labels, overwrite = T)
+
+conditions <- dplyr::select(conditions, condition_id, condition_name, condition_score) %>%
+  as.data.frame()
+usethis::use_data(conditions, overwrite = T)
+
+distinctivenesses <- dplyr::select(distinctivenesses, distinctiveness_id, distinctiveness_name, distinctiveness_score) %>%
+  as.data.frame()
+usethis::use_data(distinctivenesses, overwrite = T)
+
+difficulties <- dplyr::select(difficulties, difficulty_id, difficulty_name, difficulty_multiplier) %>%
+  as.data.frame()
+usethis::use_data(difficulties, overwrite = T)
+
+years_to_target <- dplyr::select(years_to_target, years_to_target_id, years_to_target_name, years_to_target_multiplier) %>%
+  as.data.frame()
+usethis::use_data(years_to_target, overwrite = T)
+
+strategic_significances <- dplyr::select(strategic_significances, strategic_significance_id, strategic_significance_name, strategic_significance_description, strategic_significance_multiplier) %>%
+  as.data.frame()
+usethis::use_data(strategic_significances, overwrite = T)
+
+habitat_conditions <- dplyr::select(habitat_conditions, habitat_type_id, condition_id) %>%
+  as.data.frame()
+usethis::use_data(habitat_conditions, overwrite = T)
+
+enhancement <- dplyr::select(enhancement, 
+                             enhancement_id, 
+                             post_habitat_type_id, 
+                             post_condition_id, 
+                             base_habitat_type_id, 
+                             base_condition_id, 
+                             years_to_target_id, 
+                             difficulty_id) %>%
+  as.data.frame()
+usethis::use_data(enhancement, overwrite = T)
+
+creation <- creation %>%
+  dplyr::mutate(creation_id = 1:nrow(.)) %>%
+  dplyr::select(
+                          creation_id, 
+                          habitat_type_id, 
+                          condition_id, 
+                          years_to_target_id, 
+                          difficulty_id) %>%
+  as.data.frame()
+usethis::use_data(creation, overwrite = T)
+```
+
+
+
+
+
