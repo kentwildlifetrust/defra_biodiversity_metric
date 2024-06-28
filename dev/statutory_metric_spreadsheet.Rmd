@@ -2949,6 +2949,8 @@ creation <- creation %>%
                           difficulty_id) %>%
   as.data.frame()
 usethis::use_data(creation, overwrite = T)
+
+usethis::use_data(broad_habitats, overwrite = T)
 ```
 
 
