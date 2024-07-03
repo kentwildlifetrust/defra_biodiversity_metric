@@ -135,7 +135,7 @@ habitat_labels <- habitat_labels %>%
 
 
 #check
-# path <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/The_Statutory_Biodiversity_Metric_Calculation_Tool_-_Macro_disabled_02.24.xlsx"
+path <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/inst/extdata/The_Statutory_Biodiversity_Metric_Calculation_Tool_-_Macro_disabled_02.24.xlsx"
 # path_edit <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/metric_edit.xlsx"
 # 
 # workbook <- openxlsx::loadWorkbook(path)
@@ -459,7 +459,6 @@ habitat_conditions <- habitat_conditions %>%
 
 # #test
 #use these spreadsheets for testing
-path <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/The_Statutory_Biodiversity_Metric_Calculation_Tool_-_Macro_disabled_02.24.xlsx"
 path_edit <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/metric_edit.xlsx"
 
 # #check that habitat_conditions$habitat_name matches habitat_types$habitat_name
@@ -487,7 +486,7 @@ path_edit <- "C:/Users/euan.mckenzie/git/defra_biodiversity_metric/data/metric_e
 # 
 # lims <- seq(1, nrow(test_data), by = max_rows)
 # 
-# library(RDCOMClient)
+library(RDCOMClient)
 # 
 # for (i in 3:length(lims)){
 #   test_data_sub <- test_data[lims[i - 1]:(lims[i] - 1), ]
@@ -2130,7 +2129,12 @@ trading_rules <- trading_rules %>%
       dplyr::select(habitat_name, habitat_type_id),
     by = "habitat_name"
   ) %>%
-  dplyr::select(habitat_type_id, trading_rules)
+  dplyr::select(habitat_type_id, trading_rules) %>%
+  dplyr::group_by(habitat_type_id, trading_rules) %>%
+  dplyr::summarise() %>%
+  dplyr::ungroup()
+
+stopifnot(identical(dplyr::distinct(trading_rules), trading_rules))
 
 #O12 required action to meet trading rules
 formula_o12 <- '
@@ -2184,6 +2188,7 @@ formula_t12 <- '
 '
 #E12 is baseline_ref
 #F12 is baseline_habitat_type
+#S12 is enhanced_to_habitat_name
 #O12 is required action to meet trading rules
 #X12 is post_distinctiveness_score
 #I12 is base_distinctiveness_score
@@ -2330,9 +2335,10 @@ temporal_conditions <- get_vals(range, n_merges = 1)
 enhancement <- expand.grid(
   post_habitat_type_id = habitat_types$habitat_type_id,
   post_condition_id = conditions$condition_id,
-  base_habitat_type_id = distinctivenesses$distinctiveness_id,
+  base_habitat_type_id = habitat_types$habitat_type_id,
   base_condition_id = conditions$condition_id
 )
+nrow(enhancement) #32340
 
 #either one of the conditions or distinctiveness must increase. Neither can decrease
 #trading rules must also be met
@@ -2385,11 +2391,12 @@ enhancement <- enhancement %>%
                          base_habitat_type_id, post_habitat_type_id,
                          base_distinctiveness_score, post_distinctiveness_score) %>%
                     unname())
+nrow(enhancement) #23177
   
   #filter based on required condition changes
-  enhancement <- enhancement %>%
-    dplyr::filter(base_distinctiveness_score <= post_distinctiveness_score & base_condition_score <= post_condition_score) %>%
-    dplyr::filter(base_distinctiveness_score < post_distinctiveness_score | base_condition_score < post_condition_score)
+  # enhancement <- enhancement %>%
+  #   dplyr::filter(base_distinctiveness_score <= post_distinctiveness_score & base_condition_score <= post_condition_score) %>%
+  #   dplyr::filter(base_distinctiveness_score < post_distinctiveness_score | base_condition_score < post_condition_score)
 
 
 #filter down the baseline & post habitat and condition combinations
@@ -2403,6 +2410,8 @@ enhancement <- enhancement %>%
   dplyr::filter(is_allowed) %>%
   dplyr::select(-is_allowed)
 
+nrow(enhancement) #3311
+
 enhancement <- enhancement %>%
   dplyr::left_join(allowed_habitat_conditions,
                    by = c("post_condition_id" = "condition_id",
@@ -2410,6 +2419,7 @@ enhancement <- enhancement %>%
   dplyr::filter(is_allowed) %>%
   dplyr::select(-is_allowed)
   
+nrow(enhancement) #2189
 
 #filter down to the combinations allowed in temporal data
 colnames(temporal_data) <- temporal_data[1,]
@@ -2527,6 +2537,9 @@ stopifnot(
 )
 
 enhancement$enhancement_id <- 1:nrow(enhancement)
+
+nrow(enhancement)
+#1260
 ```
 
 #### `final_time_to_target_condition`
@@ -2796,8 +2809,15 @@ formula_aq12 = '
 #generate random data
 max_rows <- 246
 #baseline data
-habitat_parcels <- enhancement %>%
+habitat_parcels <- expand.grid(
+  post_habitat_type_id = habitat_types$habitat_type_id,
+  post_condition_id = conditions$condition_id,
+  base_condition_id = conditions$condition_id
+) %>%
+  dplyr::mutate(base_habitat_type_id = post_habitat_type_id) %>%
   dplyr::slice(sample(1:nrow(.), max_rows, replace = F)) %>%
+  dplyr::left_join(enhancement,
+                   by = c("post_habitat_type_id", "post_condition_id", "base_habitat_type_id", "base_condition_id")) %>%
   dplyr::left_join(habitat_labels %>%
                      dplyr::filter(is_enhanced_to) %>%
                      dplyr::select(base_habitat_label = habitat_label, 
@@ -2848,7 +2868,8 @@ habitat_parcels <- enhancement %>%
     habitat_units_delivered = strategic_significance_multiplier * enhanced_area_ha * (base_distinctiveness_score * base_condition_score + (difficulty_multiplier * years_to_target_multiplier * (post_distinctiveness_score * post_condition_score - base_distinctiveness_score * base_condition_score)))
     
   )
-    
+
+View(habitat_parcels)
 
 #check with spreadsheet
 workbook <- openxlsx::loadWorkbook(path)
@@ -2894,6 +2915,8 @@ stopifnot(identical(round(result$...1, 2),
                     round(habitat_parcels$habitat_units_delivered, 2)))
 
 ```
+
+
 ```{r}
 #save all the lookup tables
 habitat_types <- dplyr::select(habitat_types, habitat_type_id, broad_habitat_id, distinctiveness_id, habitat_name) %>%
